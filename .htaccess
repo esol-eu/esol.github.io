@@ -1,0 +1,4 @@
+DirectoryIndex index.html index.htm
+IndexOptions IgnoreCase FancyIndexing FoldersFirst NameWidth=* SuppressDescription SuppressHTMLPreamble
+Options +Indexes
+HeaderName .header.htm

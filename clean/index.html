@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Cleaner - Clipboard Utility</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        .status {
+            height: 1.5rem;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        #pasted-text {
+            width: 100%;
+            height: 120px;
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.875rem;
+            resize: none;
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="text-2xl font-bold text-slate-800 mb-2">Text Cleaner</h1>
+        <p class="text-slate-500 mb-8">Paste text to remove newlines and extra spaces instantly.</p>
+
+        <button id="cleanBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Clean Clipboard
+        </button>
+
+        <div id="status" class="status text-blue-600"></div>
+
+        <textarea id="pasted-text" readonly placeholder="The cleaned text will appear here..."></textarea>
+        
+        <p class="mt-6 text-xs text-slate-400">
+            Note: Requires clipboard permissions. You can also just paste anywhere on this page to trigger cleaning.
+        </p>
+    </div>
+
+    <script>
+        const cleanBtn = document.getElementById('cleanBtn');
+        const statusEl = document.getElementById('status');
+        const textPreview = document.getElementById('pasted-text');
+
+        function cleanText(text) {
+            // 1. Replace all newlines (and carriage returns) with spaces
+            // 2. Replace multiple whitespace characters with a single space
+            // 3. Trim leading/trailing whitespace
+            return text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        async function processClipboard() {
+            try {
+                statusEl.textContent = 'Reading clipboard...';
+                const text = await navigator.clipboard.readText();
+                
+                if (!text) {
+                    statusEl.textContent = 'Clipboard is empty!';
+                    statusEl.className = 'status text-amber-600';
+                    return;
+                }
+
+                const cleaned = cleanText(text);
+                await navigator.clipboard.writeText(cleaned);
+                
+                textPreview.value = cleaned;
+                statusEl.textContent = '✨ Cleaned and copied back to clipboard!';
+                statusEl.className = 'status text-green-600';
+
+                // Pulse effect on the textarea
+                textPreview.classList.add('ring-2', 'ring-green-400');
+                setTimeout(() => textPreview.classList.remove('ring-2', 'ring-green-400'), 1000);
+
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+                statusEl.textContent = 'Error: Please allow clipboard access.';
+                statusEl.className = 'status text-red-600';
+            }
+        }
+
+        cleanBtn.addEventListener('click', processClipboard);
+
+        // Global paste listener for convenience
+        window.addEventListener('paste', async (e) => {
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            if (text) {
+                const cleaned = cleanText(text);
+                textPreview.value = cleaned;
+                await navigator.clipboard.writeText(cleaned);
+                statusEl.textContent = '✨ Pasted, cleaned, and copied back!';
+                statusEl.className = 'status text-green-600';
+            }
+        });
+    </script>
+</body>
+</html>

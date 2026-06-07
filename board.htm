@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manipulatives - Custom Workspace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background-color: #f3f4f6;
+            touch-action: none;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            background: white;
+        }
+
+        #workspace {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        #workspace::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-white-fridge {
+            background-color: #f9f9f9;
+            background-image: linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        .bg-slate-50 { background-color: #f8fafc; }
+        .bg-blue-100 { background-color: #dbeafe; }
+        .bg-green-100 { background-color: #dcfce7; }
+
+        .bg-divide-2::before {
+            background-image: linear-gradient(90deg, transparent 49.8%, #cbd5e1 49.8%, #cbd5e1 50.2%, transparent 50.2%);
+        }
+        .bg-divide-3::before {
+            background-image: linear-gradient(90deg,
+                transparent 33.1%, #cbd5e1 33.1%, #cbd5e1 33.5%,
+                transparent 33.5%, transparent 66.4%, #cbd5e1 66.4%,
+                #cbd5e1 66.8%, transparent 66.8%);
+        }
+
+        .manipulative {
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+            padding: 0.5em 1em;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid #ddd;
+            font-weight: 500;
+            color: #333;
+            white-space: nowrap;
+            touch-action: none;
+            z-index: 10;
+            -webkit-user-drag: none;
+            font-size: 16px;
+        }
+        .manipulative:active {
+            cursor: grabbing;
+            z-index: 100;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+        }
+
+        .toolbar {
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 8px;
+            z-index: 200;
+            flex-shrink: 0;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .is-bold { font-weight: 800 !important; }
+
+        /* Font Classes */
+        .font-sans-card { font-family: ui-sans-serif, system-ui, sans-serif; }
+        .font-serif-card { font-family: 'Noto Serif', serif; }
+        .font-handwriting-card { font-family: 'Kalam', cursive; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="toolbar shadow-sm overflow-x-auto">
+            <!-- Title removed for space -->
+
+            <button id="addCardsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-bold transition shrink-0">
+                + Add
+            </button>
+
+            <button id="undoBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0" title="Undo (Ctrl+Z)" disabled>
+                Undo
+            </button>
+
+            <div class="h-6 w-px bg-slate-300 mx-0.5 shrink-0"></div>
+
+            <div class="flex items-center bg-slate-100 rounded p-1 shrink-0">
+                <button id="sizeDownBtn" class="w-8 h-8 flex items-center justify-center hover:bg-white rounded transition text-slate-700 font-bold" title="Smaller">-</button>
+                <button id="boldExistingBtn" class="w-8 h-8 flex items-center justify-center hover:bg-white rounded transition text-slate-700 font-serif font-black" title="Bold Existing Cards">B</button>
+                <button id="fontCycleBtn" class="w-8 h-8 flex items-center justify-center hover:bg-white rounded transition text-slate-700 font-serif text-lg" title="Cycle Font (Existing Only)">F</button>
+                <button id="sizeUpBtn" class="w-8 h-8 flex items-center justify-center hover:bg-white rounded transition text-slate-700 font-bold" title="Larger">+</button>
+            </div>
+
+            <div class="h-6 w-px bg-slate-300 mx-0.5 shrink-0"></div>
+
+            <button id="shuffleBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition shrink-0">
+                Shuffle
+            </button>
+            <button id="lineBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition shrink-0">
+                Line
+            </button>
+            <button id="stackBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition shrink-0">
+                Stack
+            </button>
+            <button id="clearBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded text-sm font-medium transition shrink-0">
+                Clear
+            </button>
+
+            <div class="h-6 w-px bg-slate-300 mx-0.5 shrink-0"></div>
+
+            <select id="bgSelector" class="bg-slate-100 border-none rounded text-sm p-1.5 outline-none focus:ring-2 focus:ring-blue-400 shrink-0">
+                <option value="white-fridge">White Fridge</option>
+                <option value="slate-50">Light Gray</option>
+                <option value="blue-100">Light Blue</option>
+                <option value="green-100">Light Green</option>
+                <option value="divide-2">Vertical Split (2)</option>
+                <option value="divide-3">Vertical Split (3)</option>
+            </select>
+        </div>
+
+        <div id="workspace" class="bg-white-fridge"></div>
+    </div>
+
+    <div id="inputModal" class="modal-overlay">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h2 class="text-lg font-bold mb-2">Add New Cards</h2>
+            <p class="text-sm text-slate-500 mb-4">Enter names or terms separated by commas:</p>
+            <textarea id="modalInput" class="w-full h-32 p-2 border rounded mb-4 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Michael, Dwight, Jim..."></textarea>
+            <div class="flex justify-end gap-2">
+                <button id="modalCancel" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded transition">Cancel</button>
+                <button id="modalConfirm" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-bold">Add Cards</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const workspace = document.getElementById('workspace');
+            const addBtn = document.getElementById('addCardsBtn');
+            const undoBtn = document.getElementById('undoBtn');
+            const shuffleBtn = document.getElementById('shuffleBtn');
+            const lineBtn = document.getElementById('lineBtn');
+            const stackBtn = document.getElementById('stackBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const bgSelector = document.getElementById('bgSelector');
+            const sizeUpBtn = document.getElementById('sizeUpBtn');
+            const sizeDownBtn = document.getElementById('sizeDownBtn');
+            const boldExistingBtn = document.getElementById('boldExistingBtn');
+            const fontCycleBtn = document.getElementById('fontCycleBtn');
+
+            const inputModal = document.getElementById('inputModal');
+            const modalInput = document.getElementById('modalInput');
+
+            let activeItem = null;
+            let startX, startY, initialLeft, initialTop;
+            let currentFontSize = 16;
+
+            // History Management
+            let history = [];
+            const saveState = () => {
+                const state = Array.from(document.querySelectorAll('.manipulative')).map(el => ({
+                    id: el.dataset.id || (el.dataset.id = Math.random().toString(36).substr(2, 9)),
+                    text: el.textContent,
+                    left: el.style.left,
+                    top: el.style.top,
+                    fontSize: el.style.fontSize,
+                    isBold: el.classList.contains('is-bold'),
+                    fontClass: Array.from(el.classList).find(c => c.startsWith('font-') && c.endsWith('-card')) || 'font-sans-card'
+                }));
+                const stateStr = JSON.stringify(state);
+                // Don't save if it's the same as current last state
+                if (history.length > 0 && history[history.length - 1] === stateStr) return;
+
+                history.push(stateStr);
+                if (history.length > 30) history.shift();
+                undoBtn.disabled = false;
+            };
+
+            const undo = () => {
+                if (history.length === 0) return;
+                const lastState = JSON.parse(history.pop());
+                workspace.innerHTML = '';
+                lastState.forEach(cardData => {
+                    const div = document.createElement('div');
+                    div.className = `manipulative ${cardData.fontClass}`;
+                    if (cardData.isBold) div.classList.add('is-bold');
+                    div.dataset.id = cardData.id;
+                    div.textContent = cardData.text;
+                    div.style.left = cardData.left;
+                    div.style.top = cardData.top;
+                    div.style.fontSize = cardData.fontSize;
+                    div.addEventListener('pointerdown', onPointerDown);
+                    workspace.appendChild(div);
+                });
+                if (history.length === 0) undoBtn.disabled = true;
+            };
+
+            // Font Management
+            const fontTypes = ['font-sans-card', 'font-serif-card', 'font-handwriting-card'];
+            let currentFontIndex = 0;
+
+            const cycleFont = () => {
+                saveState();
+                currentFontIndex = (currentFontIndex + 1) % fontTypes.length;
+                const newClass = fontTypes[currentFontIndex];
+                const items = document.querySelectorAll('.manipulative');
+                items.forEach(item => {
+                    fontTypes.forEach(f => item.classList.remove(f));
+                    item.classList.add(newClass);
+                });
+            };
+
+            // Check for URL parameters
+            const params = new URLSearchParams(window.location.search);
+            const cardsParam = params.get('cards');
+            if (cardsParam) {
+                const items = cardsParam.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                addCardsToCanvas(items);
+            }
+
+            const showAddCards = () => {
+                inputModal.style.display = 'flex';
+                modalInput.value = '';
+                modalInput.focus();
+            };
+
+            const hideInputModal = () => {
+                inputModal.style.display = 'none';
+            };
+
+            const processInput = () => {
+                const input = modalInput.value;
+                if (input && input.trim()) {
+                    saveState();
+                    const items = input.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    addCardsToCanvas(items);
+                }
+                hideInputModal();
+            };
+
+            function addCardsToCanvas(items) {
+                items.forEach((name) => {
+                    const div = document.createElement('div');
+                    div.className = 'manipulative font-sans-card';
+                    div.textContent = name;
+                    div.style.fontSize = `${currentFontSize}px`;
+
+                    const x = (workspace.offsetWidth / 2 - 60) + (Math.random() * 200 - 100);
+                    const y = (workspace.offsetHeight / 2 - 25) + (Math.random() * 200 - 100);
+
+                    div.style.left = `${Math.max(10, x)}px`;
+                    div.style.top = `${Math.max(10, y)}px`;
+
+                    div.addEventListener('pointerdown', onPointerDown);
+                    workspace.appendChild(div);
+                });
+            }
+
+            function updateCardSizes(delta) {
+                saveState();
+                currentFontSize = Math.max(8, Math.min(64, currentFontSize + delta));
+                const items = document.querySelectorAll('.manipulative');
+                items.forEach(item => {
+                    item.style.fontSize = `${currentFontSize}px`;
+                });
+            }
+
+            function boldExisting() {
+                saveState();
+                const items = document.querySelectorAll('.manipulative');
+                items.forEach(item => {
+                    item.classList.add('is-bold');
+                });
+            }
+
+            function onPointerDown(e) {
+                if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+                activeItem = e.currentTarget;
+                saveState(); // Save state at the start of interaction
+
+                const rect = activeItem.getBoundingClientRect();
+                const workspaceRect = workspace.getBoundingClientRect();
+
+                startX = e.clientX;
+                startY = e.clientY;
+                initialLeft = rect.left - workspaceRect.left;
+                initialTop = rect.top - workspaceRect.top;
+
+                activeItem.setPointerCapture(e.pointerId);
+                activeItem.style.transition = 'none';
+
+                activeItem.addEventListener('pointermove', onPointerMove);
+                activeItem.addEventListener('pointerup', onPointerUp);
+                activeItem.addEventListener('pointercancel', onPointerUp);
+            }
+
+            function onPointerMove(e) {
+                if (!activeItem) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                let newX = initialLeft + dx;
+                let newY = initialTop + dy;
+
+                const maxX = workspace.offsetWidth - activeItem.offsetWidth;
+                const maxY = workspace.offsetHeight - activeItem.offsetHeight;
+
+                newX = Math.max(0, Math.min(newX, maxX));
+                newY = Math.max(0, Math.min(newY, maxY));
+
+                activeItem.style.left = `${newX}px`;
+                activeItem.style.top = `${newY}px`;
+            }
+
+            function onPointerUp(e) {
+                if (activeItem) {
+                    activeItem.releasePointerCapture(e.pointerId);
+                    activeItem.removeEventListener('pointermove', onPointerMove);
+                    activeItem.removeEventListener('pointerup', onPointerUp);
+                    activeItem.removeEventListener('pointercancel', onPointerUp);
+                    activeItem = null;
+                }
+            }
+
+            addBtn.addEventListener('click', showAddCards);
+            undoBtn.addEventListener('click', undo);
+            document.getElementById('modalConfirm').addEventListener('click', processInput);
+            document.getElementById('modalCancel').addEventListener('click', hideInputModal);
+
+            sizeUpBtn.addEventListener('click', () => updateCardSizes(4));
+            sizeDownBtn.addEventListener('click', () => updateCardSizes(-4));
+            boldExistingBtn.addEventListener('click', boldExisting);
+            fontCycleBtn.addEventListener('click', cycleFont);
+
+            modalInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    processInput();
+                }
+            });
+
+            clearBtn.addEventListener('click', () => {
+                saveState();
+                workspace.innerHTML = '';
+            });
+
+            shuffleBtn.addEventListener('click', () => {
+                saveState();
+                const items = document.querySelectorAll('.manipulative');
+                items.forEach(item => {
+                    const x = Math.random() * (workspace.offsetWidth - 120);
+                    const y = Math.random() * (workspace.offsetHeight - 50);
+                    item.style.transition = 'all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                    item.style.left = `${Math.max(0, x)}px`;
+                    item.style.top = `${Math.max(0, y)}px`;
+                });
+            });
+
+            lineBtn.addEventListener('click', () => {
+                saveState();
+                const items = Array.from(document.querySelectorAll('.manipulative'));
+                if (items.length === 0) return;
+
+                items.sort((a, b) => {
+                    const xA = parseFloat(a.style.left);
+                    const xB = parseFloat(b.style.left);
+                    return xA - xB;
+                });
+
+                const gap = 15;
+                let totalWidth = items.reduce((sum, item) => sum + item.offsetWidth, 0);
+                totalWidth += gap * (items.length - 1);
+
+                let currentX = (workspace.offsetWidth - totalWidth) / 2;
+                const centerY = workspace.offsetHeight / 2;
+
+                items.forEach(item => {
+                    item.style.transition = 'all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                    item.style.left = `${currentX}px`;
+                    item.style.top = `${centerY - (item.offsetHeight / 2)}px`;
+                    currentX += item.offsetWidth + gap;
+                });
+            });
+
+            stackBtn.addEventListener('click', () => {
+                saveState();
+                const items = Array.from(document.querySelectorAll('.manipulative'));
+                if (items.length === 0) return;
+
+                items.sort((a, b) => {
+                    const yA = parseFloat(a.style.top);
+                    const yB = parseFloat(b.style.top);
+                    return yA - yB;
+                });
+
+                const gap = 10;
+                let totalHeight = items.reduce((sum, item) => sum + item.offsetHeight, 0);
+                totalHeight += gap * (items.length - 1);
+
+                const centerX = workspace.offsetWidth / 2;
+                let currentY = (workspace.offsetHeight - totalHeight) / 2;
+
+                items.forEach(item => {
+                    item.style.transition = 'all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                    item.style.left = `${centerX - (item.offsetWidth / 2)}px`;
+                    item.style.top = `${currentY}px`;
+                    currentY += item.offsetHeight + gap;
+                });
+            });
+
+            bgSelector.addEventListener('change', (e) => {
+                const val = e.target.value;
+                workspace.classList.remove('bg-white-fridge', 'bg-slate-50', 'bg-blue-100', 'bg-green-100', 'bg-divide-2', 'bg-divide-3');
+                if (val.startsWith('divide-')) {
+                    workspace.classList.add('bg-slate-50', 'bg-' + val);
+                } else {
+                    workspace.classList.add('bg-' + val);
+                }
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') hideInputModal();
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    e.preventDefault();
+                    undo();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

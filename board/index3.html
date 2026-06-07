@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manipulatives - Custom Workspace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!--link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"-->
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background-color: #f3f4f6;
+            touch-action: none;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            background: white;
+        }
+
+        #workspace, #slideshow-overlay {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        #workspace::before, #slideshow-overlay::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Background Styles */
+        .bg-white-fridge {
+            background-color: #f9f9f9;
+            background-image: linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        .bg-slate-50 { background-color: #f8fafc; }
+        .bg-blue-100 { background-color: #dbeafe; }
+        .bg-green-100 { background-color: #dcfce7; }
+        .bg-yellow-50 { background-color: #fefce8; }
+        .bg-rose-50 { background-color: #fff1f2; }
+        .bg-purple-50 { background-color: #faf5ff; }
+        .bg-cork { background-color: #d2b48c; background-image: radial-gradient(#bc8f8f 1px, transparent 0); background-size: 20px 20px; }
+
+        .bg-divide-2::before {
+            background-image: linear-gradient(90deg, transparent 49.8%, #cbd5e1 49.8%, #cbd5e1 50.2%, transparent 50.2%);
+        }
+        .bg-divide-3::before {
+            background-image: linear-gradient(90deg,
+                transparent 33.1%, #cbd5e1 33.1%, #cbd5e1 33.5%,
+                transparent 33.5%, transparent 66.4%, #cbd5e1 66.4%,
+                #cbd5e1 66.8%, transparent 66.8%);
+        }
+
+        .manipulative {
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+            display: inline-flex;
+            width: auto;
+            height: auto;
+            touch-action: none;
+            z-index: 10;
+            -webkit-user-drag: none;
+            perspective: 1000px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            transform-origin: center center;
+        }
+
+        .flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            grid-area: 1 / 1;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.6em 1.2em;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border: 1px solid #e2e8f0;
+            white-space: pre;
+            min-width: 4em;
+            min-height: 2.2em;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background: #fdfdfd;
+        }
+
+        .manipulative:active {
+            cursor: grabbing;
+            z-index: 1000 !important;
+        }
+
+        .manipulative:active .card-face {
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .toolbar {
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 6px;
+            z-index: 200;
+            flex-shrink: 0;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 100000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .is-bold { font-weight: 800 !important; }
+        .is-italic { font-style: italic !important; }
+        .is-underline { text-decoration: underline !important; }
+
+        .font-sans-card { font-family: Roboto Mono, ui-sans-serif, system-ui, sans-serif; }
+        .font-serif-card { font-family: 'Noto Serif', serif; }
+        .font-handwriting-card { font-family: 'Kalam', cursive; }
+
+        /* Slideshow Overlay */
+        #slideshow-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #1e293b;
+        }
+        #slide-content {
+            background: transparent;
+            min-width: 500px;
+            min-height: 300px;
+            perspective: 1500px;
+            cursor: pointer;
+        }
+        .slide-inner {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            transform-origin: center center;
+        }
+        .slide-inner.flipped {
+            transform: rotateY(180deg);
+        }
+        .slide-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            background: white;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            font-size: 48px;
+            padding: 60px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .slide-back {
+            transform: rotateY(180deg);
+            background: #fdfdfd;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 300000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div class="toolbar shadow-sm overflow-x-auto">
+            <button id="addCardsBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 h-9 flex items-center justify-center rounded text-sm font-medium transition shrink-0">
+                + Add
+            </button>
+
+            <button id="undoBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 h-9 flex items-center justify-center rounded text-sm font-medium transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0" title="Undo (Ctrl+Z)" disabled>
+                Undo
+            </button>
+
+            <div class="h-6 w-px bg-slate-300 mx-0.5 shrink-0"></div>
+
+            <div class="flex items-center bg-slate-100 rounded h-9 px-1 shrink-0">
+                <button id="sizeDownBtn" class="w-8 h-7 flex items-center justify-center hover:bg-white rounded transition text-slate-700 font-bold" title="Smaller">-</button>
+                <button id="boldBtn" class="w-8 h-7 flex items-center justify-center hover:bg-white rounded transition text-slate-700 font-bold" title="Bold Existing">B</button>
+                <button id="italicBtn" class="w-8 h-7 flex items-center justify-center hover:bg-white rounded transition text-slate-700 italic font-serif font-bold" title="Italic Existing">I</button>
+                <button id="underlineBtn" class="w-8 h-7 flex items-center justify-center hover:bg-white rounded transition text-slate-700 underline font-bold" title="Underline Existing">U</button>
+                <button id="fontCycleBtn" class="w-8 h-7 flex items-center justify-center hover:bg-white rounded transition text-slate-700 font-serif text-lg" title="Cycle Font">F</button>
+                <button id="sizeUpBtn" class="w-8 h-7 flex items-center justify-center hover:bg-white rounded transition text-slate-700 font-bold" title="Larger">+</button>
+            </div>
+
+            <div class="h-6 w-px bg-slate-300 mx-0.5 shrink-0"></div>
+
+            <button id="shuffleBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 h-9 flex items-center justify-center rounded text-sm font-medium transition shrink-0">Shuffle</button>
+            <button id="lineBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 h-9 flex items-center justify-center rounded text-sm font-medium transition shrink-0" title="Center in Row">Line</button>
+            <button id="stackBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 h-9 flex items-center justify-center rounded text-sm font-medium transition shrink-0" title="Center in Column">Stack</button>
+            <button id="clearBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 h-9 flex items-center justify-center rounded text-sm font-medium transition shrink-0">Clear</button>
+
+            <div class="h-6 w-px bg-slate-300 mx-0.5 shrink-0"></div>
+
+            <button id="slideshowBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 h-9 flex items-center justify-center rounded text-sm font-medium transition shrink-0">
+                Present
+            </button>
+
+            <button id="shareBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 h-9 flex items-center justify-center rounded text-sm font-medium transition shrink-0">
+                Share
+            </button>
+
+            <select id="bgSelector" class="bg-slate-100 border-none rounded text-sm h-9 px-1.5 outline-none focus:ring-2 focus:ring-blue-400 shrink-0">
+                <option value="white-fridge">White Fridge</option>
+                <option value="slate-50">Light Gray</option>
+                <option value="blue-100" selected>Light Blue</option>
+                <option value="green-100">Light Green</option>
+                <option value="yellow-50">Soft Yellow</option>
+                <option value="rose-50">Soft Rose</option>
+                <option value="purple-50">Soft Purple</option>
+                <option value="cork">Cork Board</option>
+                <option value="divide-2">Split (2)</option>
+                <option value="divide-3">Split (3)</option>
+            </select>
+
+            <button id="helpBtn" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold shrink-0">?</button>
+        </div>
+
+        <div id="workspace" class="bg-blue-100"></div>
+    </div>
+
+    <!-- Modals -->
+    <div id="inputModal" class="modal-overlay">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h2 class="text-lg font-bold mb-2">Add New Cards</h2>
+            <p class="text-sm text-slate-500 mb-4">Enter terms separated by commas. Use <b>front:back</b> for two-sided cards. (Ctrl+Enter to add)</p>
+            <textarea id="modalInput" class="w-full h-32 p-2 border rounded mb-4 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Question:Answer, Apple:Manzana, Solo Card..."></textarea>
+            <div class="flex justify-end gap-2">
+                <button id="modalCancel" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded transition">Cancel</button>
+                <button id="modalConfirm" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-bold">Add Cards</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="helpModal" class="modal-overlay">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full mx-4">
+            <h2 class="text-xl font-bold mb-4">How to use Manipulatives</h2>
+            <div class="text-sm text-slate-700 space-y-3 overflow-y-auto max-h-[60vh]">
+                <p><b>Add Cards:</b> Use the + Add button. Separate items with commas. Use a colon (:) to make a two-sided card (e.g., <i>Flash:Card</i>).</p>
+                <p><b>Share:</b> Click "Share Link" to copy a URL that opens with your current set of cards.</p>
+                <p><b>Move:</b> Drag cards around. Double-click to flip.</p>
+                <p><b>Keyboard Shortcuts:</b></p>
+                <ul class="list-disc ml-5 space-y-1">
+                    <li><kbd class="bg-slate-100 px-1 border rounded">P</kbd>: Present Mode</li>
+                    <li><kbd class="bg-slate-100 px-1 border rounded">-</kbd> (Hyphen): Toggle Cloze mode</li>
+                    <li><kbd class="bg-slate-100 px-1 border rounded">Ctrl+Z</kbd>: Undo</li>
+                </ul>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="helpClose" class="px-6 py-2 bg-slate-800 text-white rounded hover:bg-slate-900 transition font-bold">Got it!</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="slideshow-overlay">
+        <div id="slide-content">
+            <div class="slide-inner">
+                <div class="slide-face slide-front">Front</div>
+                <div class="slide-face slide-back">Back</div>
+            </div>
+        </div>
+        <div class="mt-12 flex gap-8 items-center">
+            <button id="slidePrev" class="text-3xl hover:text-blue-600 transition">←</button>
+            <div id="slideCounter" class="text-xl font-mono font-bold">1 / 10</div>
+            <button id="slideNext" class="text-3xl hover:text-blue-600 transition">→</button>
+        </div>
+        <div class="mt-4 text-slate-600 text-sm font-medium">Space to Flip • Arrows for Next/Prev • - (Hyphen) to Toggle Cloze • ESC to exit</div>
+    </div>
+
+    <div id="toast">Link copied to clipboard!</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const workspace = document.getElementById('workspace');
+            const addBtn = document.getElementById('addCardsBtn');
+            const undoBtn = document.getElementById('undoBtn');
+            const shuffleBtn = document.getElementById('shuffleBtn');
+            const lineBtn = document.getElementById('lineBtn');
+            const stackBtn = document.getElementById('stackBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const shareBtn = document.getElementById('shareBtn');
+            const bgSelector = document.getElementById('bgSelector');
+            const sizeUpBtn = document.getElementById('sizeUpBtn');
+            const sizeDownBtn = document.getElementById('sizeDownBtn');
+            const boldBtn = document.getElementById('boldBtn');
+            const italicBtn = document.getElementById('italicBtn');
+            const underlineBtn = document.getElementById('underlineBtn');
+            const fontCycleBtn = document.getElementById('fontCycleBtn');
+            const helpBtn = document.getElementById('helpBtn');
+            const slideshowBtn = document.getElementById('slideshowBtn');
+
+            const inputModal = document.getElementById('inputModal');
+            const helpModal = document.getElementById('helpModal');
+            const modalInput = document.getElementById('modalInput');
+            const modalConfirm = document.getElementById('modalConfirm');
+            const slideshowOverlay = document.getElementById('slideshow-overlay');
+            const slideContent = document.getElementById('slide-content');
+            const toast = document.getElementById('toast');
+
+            let activeItem = null;
+            let startX, startY, initialLeft, initialTop;
+            let currentFontSize = 24;
+            let slideshowIndex = 0;
+            let slideshowCards = [];
+            let clozeActive = false;
+
+            let history = [];
+
+            // --- URL State Management ---
+            const getShareableData = () => {
+                const cards = Array.from(document.querySelectorAll('.manipulative')).map(el => {
+                    const f = encodeURIComponent(el.dataset.front);
+                    const b = encodeURIComponent(el.dataset.back || '');
+                    const z = (el.style.fontSize || '24px').replace('px', '');
+                    let s = '';
+                    if (el.classList.contains('is-bold')) s += 'b';
+                    if (el.classList.contains('is-italic')) s += 'i';
+                    if (el.classList.contains('is-underline')) s += 'u';
+                    const fontClass = Array.from(el.classList).find(c => c.startsWith('font-') && c.endsWith('-card'));
+                    if (fontClass === 'font-serif-card') s += 'r';
+                    else if (fontClass === 'font-handwriting-card') s += 'h';
+                    else s += 's';
+                    return `${f}:${b}:${z}:${s}`;
+                });
+                return cards.join('|');
+            };
+
+            const loadFromUrl = () => {
+                const params = new URLSearchParams(window.location.search);
+                const data = params.get('c');
+                if (!data) return;
+
+                try {
+                    let cardsData = [];
+                    // Check if it's the new format (contains | or :) or old Base64
+                    if (data.includes('|') || (data.includes(':') && !data.startsWith('W3si'))) {
+                        cardsData = data.split('|').map(str => {
+                            const [f, b, z, s] = str.split(':');
+                            return {
+                                f: decodeURIComponent(f),
+                                b: decodeURIComponent(b),
+                                z: z ? z + 'px' : '24px',
+                                s: {
+                                    b: s ? s.includes('b') : false,
+                                    i: s ? s.includes('i') : false,
+                                    u: s ? s.includes('u') : false,
+                                    f: s ? (s.includes('r') ? 'font-serif-card' : (s.includes('h') ? 'font-handwriting-card' : 'font-sans-card')) : 'font-sans-card'
+                                }
+                            };
+                        });
+                    } else {
+                        // Fallback to old Base64 JSON
+                        cardsData = JSON.parse(decodeURIComponent(escape(atob(data))));
+                    }
+
+                    workspace.innerHTML = '';
+                    cardsData.forEach(c => {
+                        const div = createCardElement(c.f, c.b);
+                        if (c.z) div.style.fontSize = c.z;
+                        if (c.s.b) div.classList.add('is-bold');
+                        if (c.s.i) div.classList.add('is-italic');
+                        if (c.s.u) div.classList.add('is-underline');
+                        if (c.s.f) div.classList.add(c.s.f);
+                        workspace.appendChild(div);
+                    });
+
+                    // Trigger a shuffle or alignment after short delay so offsets work
+                    setTimeout(() => lineBtn.click(), 50);
+
+                    // Clean up URL without reloading
+                    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                    window.history.replaceState({path: newUrl}, '', newUrl);
+                } catch (e) {
+                    console.error("Failed to load cards from URL", e);
+                }
+            };
+
+            shareBtn.addEventListener('click', () => {
+                const data = getShareableData();
+                const url = new URL(window.location.href);
+                url.searchParams.set('c', data);
+
+                const urlStr = url.toString();
+                const textArea = document.createElement("textarea");
+                textArea.value = urlStr;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast("Link copied to clipboard!");
+                } catch (err) {
+                    console.error('Fallback: Oops, unable to copy', err);
+                }
+                document.body.removeChild(textArea);
+            });
+
+            function showToast(msg) {
+                toast.textContent = msg;
+                toast.style.opacity = '1';
+                setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+            }
+
+            // --- Core Logic ---
+            const saveState = () => {
+                const state = Array.from(document.querySelectorAll('.manipulative')).map(el => ({
+                    id: el.dataset.id || (el.dataset.id = Math.random().toString(36).substr(2, 9)),
+                    front: el.dataset.front,
+                    back: el.dataset.back,
+                    flipped: el.classList.contains('flipped'),
+                    left: el.style.left,
+                    top: el.style.top,
+                    fontSize: el.style.fontSize,
+                    zIndex: el.style.zIndex || 10,
+                    isBold: el.classList.contains('is-bold'),
+                    isItalic: el.classList.contains('is-italic'),
+                    isUnderline: el.classList.contains('is-underline'),
+                    fontClass: Array.from(el.classList).find(c => c.startsWith('font-') && c.endsWith('-card')) || 'font-sans-card'
+                }));
+                const stateStr = JSON.stringify(state);
+                if (history.length > 0 && history[history.length - 1] === stateStr) return;
+                history.push(stateStr);
+                if (history.length > 50) history.shift();
+                undoBtn.disabled = false;
+            };
+
+            const undo = () => {
+                if (history.length === 0) return;
+                const lastStateStr = history.pop();
+                const lastState = JSON.parse(lastStateStr);
+                workspace.innerHTML = '';
+                lastState.forEach(cardData => {
+                    const div = createCardElement(cardData.front, cardData.back, cardData.id);
+                    if (cardData.flipped) div.classList.add('flipped');
+                    if (cardData.isBold) div.classList.add('is-bold');
+                    if (cardData.isItalic) div.classList.add('is-italic');
+                    if (cardData.isUnderline) div.classList.add('is-underline');
+                    div.classList.add(cardData.fontClass);
+                    div.style.left = cardData.left;
+                    div.style.top = cardData.top;
+                    div.style.fontSize = cardData.fontSize;
+                    div.style.zIndex = cardData.zIndex;
+                    workspace.appendChild(div);
+                });
+                if (history.length === 0) undoBtn.disabled = true;
+                if (clozeActive) applyCloze();
+            };
+
+            const fontTypes = ['font-sans-card', 'font-serif-card', 'font-handwriting-card'];
+            let currentFontIndex = 0;
+
+            const cycleFont = () => {
+                saveState();
+                currentFontIndex = (currentFontIndex + 1) % fontTypes.length;
+                const newClass = fontTypes[currentFontIndex];
+                document.querySelectorAll('.manipulative').forEach(item => {
+                    fontTypes.forEach(f => item.classList.remove(f));
+                    item.classList.add(newClass);
+                });
+            };
+
+            const toggleCloze = () => {
+                clozeActive = !clozeActive;
+                applyCloze();
+                if (slideshowOverlay.style.display === 'flex') updateSlide();
+            };
+
+            const clozeText = (text) => {
+                if (!text) return "";
+                return text.split(' ').map(word => {
+                    if (word.length <= 1) return word;
+                    const firstChar = word[0];
+                    const rest = word.slice(1).replace(/[a-zA-Z0-9]/g, '_');
+                    return firstChar + rest;
+                }).join(' ');
+            };
+
+            const applyCloze = () => {
+                document.querySelectorAll('.manipulative').forEach(card => {
+                    const frontFace = card.querySelector('.card-front');
+                    const backFace = card.querySelector('.card-back');
+                    frontFace.textContent = clozeActive ? clozeText(card.dataset.front) : card.dataset.front;
+                    if (backFace) backFace.textContent = clozeActive ? clozeText(card.dataset.back) : card.dataset.back;
+                });
+            };
+
+            function createCardElement(front, back, id = null) {
+                const div = document.createElement('div');
+                div.className = 'manipulative font-sans-card';
+                div.dataset.id = id || Math.random().toString(36).substr(2, 9);
+                div.dataset.front = front;
+                div.dataset.back = back || "";
+
+                const inner = document.createElement('div');
+                inner.className = 'card-inner';
+
+                const frontFace = document.createElement('div');
+                frontFace.className = 'card-face card-front';
+                frontFace.textContent = clozeActive ? clozeText(front) : front;
+                inner.appendChild(frontFace);
+
+                if (back) {
+                    const backFace = document.createElement('div');
+                    backFace.className = 'card-face card-back';
+                    backFace.textContent = clozeActive ? clozeText(back) : back;
+                    inner.appendChild(backFace);
+                }
+
+                div.appendChild(inner);
+                div.addEventListener('pointerdown', onPointerDown);
+                div.addEventListener('dblclick', (e) => {
+                    if (div.dataset.back) {
+                        saveState();
+                        div.classList.toggle('flipped');
+                    }
+                });
+                return div;
+            }
+
+            function getNonOverlappingPos(width, height, existingCards) {
+                const margin = 10;
+                for (let i = 0; i < 50; i++) {
+                    const x = Math.random() * (workspace.offsetWidth - width - margin * 2) + margin;
+                    const y = Math.random() * (workspace.offsetHeight - height - margin * 2) + margin;
+                    let overlap = false;
+                    for (let card of existingCards) {
+                        const r = {
+                            l: parseFloat(card.style.left),
+                            t: parseFloat(card.style.top),
+                            w: card.offsetWidth,
+                            h: card.offsetHeight
+                        };
+                        if (!(x + width < r.l || x > r.l + r.w || y + height < r.t || y > r.t + r.h)) {
+                            overlap = true; break;
+                        }
+                    }
+                    if (!overlap) return { x, y };
+                }
+                return { x: Math.random() * (workspace.offsetWidth - width), y: Math.random() * (workspace.offsetHeight - height) };
+            }
+
+            function addCardsToCanvas(items) {
+                items.forEach((item) => {
+                    const div = createCardElement(item.front, item.back);
+                    div.style.fontSize = `${currentFontSize}px`;
+                    workspace.appendChild(div);
+                    const existing = Array.from(workspace.querySelectorAll('.manipulative')).filter(el => el !== div);
+                    const pos = getNonOverlappingPos(div.offsetWidth, div.offsetHeight, existing);
+                    div.style.left = `${pos.x}px`;
+                    div.style.top = `${pos.y}px`;
+                });
+            }
+
+            function onPointerDown(e) {
+                if (e.button !== 0 && e.pointerType === 'mouse') return;
+                activeItem = e.currentTarget;
+                saveState();
+                const allCards = Array.from(document.querySelectorAll('.manipulative'));
+                const maxZ = Math.max(...allCards.map(el => parseInt(el.style.zIndex) || 10));
+                activeItem.style.zIndex = maxZ + 1;
+                const rect = activeItem.getBoundingClientRect();
+                const wRect = workspace.getBoundingClientRect();
+                startX = e.clientX; startY = e.clientY;
+                initialLeft = rect.left - wRect.left;
+                initialTop = rect.top - wRect.top;
+                activeItem.setPointerCapture(e.pointerId);
+                activeItem.style.transition = 'none';
+                activeItem.addEventListener('pointermove', onPointerMove);
+                activeItem.addEventListener('pointerup', onPointerUp);
+            }
+
+            function onPointerMove(e) {
+                if (!activeItem) return;
+                let newX = initialLeft + (e.clientX - startX);
+                let newY = initialTop + (e.clientY - startY);
+                newX = Math.max(0, Math.min(newX, workspace.offsetWidth - activeItem.offsetWidth));
+                newY = Math.max(0, Math.min(newY, workspace.offsetHeight - activeItem.offsetHeight));
+                activeItem.style.left = `${newX}px`;
+                activeItem.style.top = `${newY}px`;
+            }
+
+            function onPointerUp(e) {
+                if (activeItem) {
+                    activeItem.releasePointerCapture(e.pointerId);
+                    activeItem.removeEventListener('pointermove', onPointerMove);
+                    activeItem.removeEventListener('pointerup', onPointerUp);
+                    activeItem = null;
+                }
+            }
+
+            function startSlideshow() {
+                slideshowCards = Array.from(document.querySelectorAll('.manipulative')).map(el => ({
+                    front: el.dataset.front,
+                    back: el.dataset.back,
+                    fontClass: Array.from(el.classList).find(c => c.startsWith('font-') && c.endsWith('-card')),
+                    isBold: el.classList.contains('is-bold'),
+                    isItalic: el.classList.contains('is-italic'),
+                    isUnderline: el.classList.contains('is-underline')
+                }));
+                if (slideshowCards.length === 0) return;
+                slideshowIndex = 0;
+                
+                // Match workspace background
+                slideshowOverlay.className = workspace.className;
+                slideshowOverlay.style.display = 'flex';
+                updateSlide();
+            }
+
+            function updateSlide() {
+                if (slideshowCards.length === 0) return;
+                const card = slideshowCards[slideshowIndex];
+                const inner = slideshowOverlay.querySelector('.slide-inner');
+                const frontEl = slideshowOverlay.querySelector('.slide-front');
+                const backEl = slideshowOverlay.querySelector('.slide-back');
+                inner.classList.remove('flipped');
+                inner.className = 'slide-inner ' + (card.fontClass || 'font-sans-card') + (card.isBold ? ' is-bold' : '') + (card.isItalic ? ' is-italic' : '') + (card.isUnderline ? ' is-underline' : '');
+                frontEl.textContent = clozeActive ? clozeText(card.front) : card.front;
+                backEl.textContent = card.back ? (clozeActive ? clozeText(card.back) : card.back) : "";
+                document.getElementById('slideCounter').textContent = `${slideshowIndex + 1} / ${slideshowCards.length}`;
+            }
+
+            function flipSlide() {
+                if (slideshowCards[slideshowIndex].back) {
+                    slideshowOverlay.querySelector('.slide-inner').classList.toggle('flipped');
+                }
+            }
+
+            function nextSlide() { slideshowIndex = (slideshowIndex + 1) % slideshowCards.length; updateSlide(); }
+            function prevSlide() { slideshowIndex = (slideshowIndex - 1 + slideshowCards.length) % slideshowCards.length; updateSlide(); }
+
+            function handleModalSubmit() {
+                const input = modalInput.value;
+                if (input.trim()) {
+                    saveState();
+                    const parsedItems = input.split(',').map(s => s.trim()).filter(s => s.length > 0).map(itemStr => {
+                        const parts = itemStr.split(':');
+                        return { front: parts[0].trim(), back: parts[1] ? parts[1].trim() : "" };
+                    });
+                    addCardsToCanvas(parsedItems);
+                }
+                inputModal.style.display = 'none';
+                modalInput.value = '';
+            }
+
+            // --- Listeners ---
+            addBtn.addEventListener('click', () => { inputModal.style.display = 'flex'; modalInput.focus(); });
+            undoBtn.addEventListener('click', undo);
+            helpBtn.addEventListener('click', () => helpModal.style.display = 'flex');
+            document.getElementById('helpClose').addEventListener('click', () => helpModal.style.display = 'none');
+            document.getElementById('modalCancel').addEventListener('click', () => { inputModal.style.display = 'none'; modalInput.value = ''; });
+            modalConfirm.addEventListener('click', handleModalSubmit);
+            modalInput.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); handleModalSubmit(); } });
+
+            slideshowBtn.addEventListener('click', startSlideshow);
+            slideContent.addEventListener('click', flipSlide);
+            document.getElementById('slideNext').addEventListener('click', nextSlide);
+            document.getElementById('slidePrev').addEventListener('click', prevSlide);
+
+            boldBtn.addEventListener('click', () => { saveState(); document.querySelectorAll('.manipulative').forEach(el => el.classList.toggle('is-bold')); });
+            italicBtn.addEventListener('click', () => { saveState(); document.querySelectorAll('.manipulative').forEach(el => el.classList.toggle('is-italic')); });
+            underlineBtn.addEventListener('click', () => { saveState(); document.querySelectorAll('.manipulative').forEach(el => el.classList.toggle('is-underline')); });
+            fontCycleBtn.addEventListener('click', cycleFont);
+
+            sizeUpBtn.addEventListener('click', () => {
+                saveState(); currentFontSize += 4;
+                document.querySelectorAll('.manipulative').forEach(el => el.style.fontSize = currentFontSize + 'px');
+            });
+            sizeDownBtn.addEventListener('click', () => {
+                saveState(); currentFontSize = Math.max(8, currentFontSize - 4);
+                document.querySelectorAll('.manipulative').forEach(el => el.style.fontSize = currentFontSize + 'px');
+            });
+
+            shuffleBtn.addEventListener('click', () => {
+                saveState();
+                const cards = Array.from(document.querySelectorAll('.manipulative'));
+                const placed = [];
+                cards.forEach(el => {
+                    el.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                    const pos = getNonOverlappingPos(el.offsetWidth, el.offsetHeight, placed);
+                    el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px';
+                    placed.push(el);
+                });
+                setTimeout(() => { document.querySelectorAll('.manipulative').forEach(el => el.style.transition = 'none'); }, 500);
+            });
+
+            lineBtn.addEventListener('click', () => {
+                saveState();
+                const items = Array.from(document.querySelectorAll('.manipulative')).sort((a,b) => parseFloat(a.style.left) - parseFloat(b.style.left));
+                if (items.length === 0) return;
+                const spacing = 10;
+                let totalWidth = items.reduce((sum, el) => sum + el.offsetWidth, 0) + (spacing * (items.length - 1));
+                let curX = (workspace.offsetWidth - totalWidth) / 2;
+                items.forEach((el, idx) => {
+                    el.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                    el.style.left = Math.max(10, curX) + 'px';
+                    el.style.top = (workspace.offsetHeight / 2 - el.offsetHeight / 2) + 'px';
+                    el.style.zIndex = 10 + idx;
+                    curX += el.offsetWidth + spacing;
+                });
+                setTimeout(() => { items.forEach(el => el.style.transition = 'none'); }, 500);
+            });
+
+            stackBtn.addEventListener('click', () => {
+                saveState();
+                const items = Array.from(document.querySelectorAll('.manipulative')).sort((a,b) => parseFloat(a.style.top) - parseFloat(b.style.top));
+                if (items.length === 0) return;
+                const spacing = 10;
+                let totalHeight = items.reduce((sum, el) => sum + el.offsetHeight, 0) + (spacing * (items.length - 1));
+                let curY = (workspace.offsetHeight - totalHeight) / 2;
+                items.forEach((el, idx) => {
+                    el.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                    el.style.top = Math.max(10, curY) + 'px';
+                    el.style.left = (workspace.offsetWidth / 2 - el.offsetWidth / 2) + 'px';
+                    el.style.zIndex = 10 + idx;
+                    curY += el.offsetHeight + spacing;
+                });
+                setTimeout(() => { items.forEach(el => el.style.transition = 'none'); }, 500);
+            });
+
+            clearBtn.addEventListener('click', () => { saveState(); workspace.innerHTML = ''; });
+            bgSelector.addEventListener('change', (e) => {
+                workspace.className = 'bg-' + e.target.value;
+                if (e.target.value.startsWith('divide')) workspace.classList.add('bg-slate-50');
+            });
+
+            window.addEventListener('keydown', (e) => {
+                const isInputActive = document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT';
+                if (slideshowOverlay.style.display === 'flex') {
+                    if (e.key === 'Escape') slideshowOverlay.style.display = 'none';
+                    if (e.key === ' ') { e.preventDefault(); flipSlide(); }
+                    if (e.key === 'ArrowRight' || e.key === 'PageDown') nextSlide();
+                    if (e.key === 'ArrowLeft' || e.key === 'PageUp') prevSlide();
+                    if (e.key === '-') { e.preventDefault(); toggleCloze(); }
+                    return;
+                }
+                if (e.key === 'Escape') { inputModal.style.display = 'none'; helpModal.style.display = 'none'; }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+                if (e.key === 'p' && !isInputActive) { e.preventDefault(); startSlideshow(); }
+                if (e.key === '-' && !isInputActive) { e.preventDefault(); toggleCloze(); }
+            });
+
+            // Init
+            loadFromUrl();
+        });
+    </script>
+</body>
+</html>
