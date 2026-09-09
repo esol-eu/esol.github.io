@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A4 Word Grid Document</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Caveat:wght@700&family=Cinzel:wght@700;900&family=Courier+Prime:wght@700&family=EB+Garamond:wght@700;800&family=Inter:wght@400;600;700;900&family=Merriweather:wght@700;900&family=Montserrat:wght@700;900&family=Nunito:wght@700;900&family=Oswald:wght@700&family=Pacifico&family=Playfair+Display:wght@700;900&family=Roboto+Mono:wght@700&family=Space+Mono:wght@700&display=swap">
+  
+  <style>
+    /* Base typography styles */
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+
+    /* Standard A4 Dimensions in millimeters */
+    .a4-portrait {
+      width: 210mm;
+      height: 297mm;
+    }
+
+    .a4-landscape {
+      width: 297mm;
+      height: 210mm;
+    }
+
+    /* Ensure precise cell rendering */
+    .grid-table {
+      width: 100%;
+      height: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .grid-cell {
+      position: relative;
+      text-align: center;
+      vertical-align: middle;
+      box-sizing: border-box;
+      overflow: hidden;
+      white-space: nowrap;
+      padding: 2px;
+    }
+
+    .word-text {
+      display: inline-block;
+      line-height: 1;
+      font-weight: 800;
+      white-space: nowrap;
+      user-select: none;
+      transform-origin: center center;
+    }
+
+    /* Print-specific rules to force exact 1-page output */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 0mm;
+      }
+
+      body {
+        background-color: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .print-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+
+      .a4-sheet {
+        box-shadow: none !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
+
+    /* Custom scrollbar for control panel */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start pb-12">
+
+  <!-- Top Control Bar (Hidden on Print) -->
+  <header class="no-print w-full bg-slate-900 text-white shadow-md sticky top-0 z-50 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Title & Info -->
+      <div class="flex items-center space-x-3">
+        <div class="bg-indigo-600 text-white p-2 rounded-lg font-black text-lg tracking-wider">A4</div>
+        <div>
+          <h1 class="text-base font-bold text-slate-100">Word Grid Document Generator</h1>
+          <p id="grid-status-badge" class="text-xs text-indigo-300 font-medium">36 Words Loaded • Auto-fitting text per cell</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center space-x-3">
+        <button id="recalc-btn" onclick="fitAllWords()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          Re-Fit Text
+        </button>
+        <button onclick="window.print()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+          Print / Export PDF
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Document Options Drawer -->
+  <div class="no-print w-full max-w-7xl mx-auto px-4 mt-4 space-y-4">
+    
+    <!-- Text Input & Delimiter Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <div class="flex flex-col lg:flex-row gap-4 items-start">
+        
+        <!-- Textarea for Custom Word Input -->
+        <div class="flex-1 w-full">
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="raw-text-input" class="font-bold text-slate-800 text-xs tracking-wide uppercase flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+              Cell Content List (Paste Words / Text)
+            </label>
+            <span id="word-count-tag" class="text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
+              36 items parsed
+            </span>
+          </div>
+          <textarea id="raw-text-input" oninput="updateWordsFromInput()" rows="3" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-mono text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition resize-y" placeholder="Paste your words here..."></textarea>
+        </div>
+
+        <!-- Delimiter Controls -->
+        <div class="w-full lg:w-64 flex flex-col gap-2 border-t lg:border-t-0 lg:border-l border-slate-200 lg:pl-4 pt-3 lg:pt-0">
+          <div>
+            <label for="delimiter-select" class="block font-semibold text-slate-700 text-xs mb-1">Text Delimiter</label>
+            <select id="delimiter-select" onchange="handleDelimiterChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="newline" selected>New Line (\n)</option>
+              <option value="comma">Comma (,)</option>
+              <option value="semicolon">Semicolon (;)</option>
+              <option value="space">Space ( )</option>
+              <option value="tab">Tab (\t)</option>
+              <option value="custom">Custom Character</option>
+            </select>
+          </div>
+
+          <!-- Custom Delimiter Field (Hidden by default) -->
+          <div id="custom-delimiter-container" class="hidden">
+            <label for="custom-delimiter" class="block font-semibold text-slate-700 text-xs mb-1">Custom Delimiter</label>
+            <input type="text" id="custom-delimiter" oninput="updateWordsFromInput()" placeholder="e.g. | or /" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+
+          <button onclick="resetToDefaultWords()" class="text-xs text-slate-500 hover:text-indigo-600 underline font-medium self-start mt-1">
+            Reset to default 36 verbs
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Layout & Formatting Options -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 text-xs">
+      
+      <!-- Grid Layout -->
+      <div>
+        <label for="grid-layout" class="block font-semibold text-slate-700 mb-1">Grid Dimensions</label>
+        <select id="grid-layout" onchange="updateLayout()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <option value="4x9" selected>4 Cols × 9 Rows (36 cells)</option>
+          <option value="3x12">3 Cols × 12 Rows (36 cells)</option>
+          <option value="6x6">6 Cols × 6 Rows (36 cells)</option>
+          <option value="5x7">5 Cols × 7 Rows (35 cells)</option>
+          <option value="4x10">4 Cols × 10 Rows (40 cells)</option>
+          <option value="3x10">3 Cols × 10 Rows (30 cells)</option>
+          <option value="2x18">2 Cols × 18 Rows (36 cells)</option>
+        </select>
+      </div>
+
+      <!-- Typography -->
+      <div>
+        <label for="font-family" class="block font-semibold text-slate-700 mb-1">Font Family</label>
+        <select id="font-family" onchange="updateStyles()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <optgroup label="Sans-Serif & Modern">
+            <option value="'Inter', sans-serif" selected>Inter (Clean Modern)</option>
+            <option value="'Montserrat', sans-serif">Montserrat (Geometric Sans)</option>
+            <option value="'Oswald', sans-serif">Oswald (Bold Display)</option>
+            <option value="'Nunito', sans-serif">Nunito (Soft Rounded)</option>
+          </optgroup>
+          <optgroup label="Serif & Classic">
+            <option value="'Merriweather', serif">Merriweather (Classic Serif)</option>
+            <option value="'Playfair Display', serif">Playfair Display (Elegant Serif)</option>
+            <option value="'EB Garamond', serif">EB Garamond (Traditional Serif)</option>
+            <option value="'Cinzel', serif">Cinzel (Cinematic / Roman)</option>
+          </optgroup>
+          <optgroup label="Display & Handwritten">
+            <option value="'Anton', sans-serif">Anton (Impact / Tall)</option>
+            <option value="'Bangers', cursive">Bangers (Comic Book)</option>
+            <option value="'Pacifico', cursive">Pacifico (Fluid Script)</option>
+            <option value="'Caveat', cursive">Caveat (Handwritten)</option>
+          </optgroup>
+          <optgroup label="Monospace & Typewriter">
+            <option value="'Roboto Mono', monospace">Roboto Mono (Monospace)</option>
+            <option value="'Space Mono', monospace">Space Mono (Tech Mono)</option>
+            <option value="'Courier Prime', monospace">Courier Prime (Typewriter)</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Letter Case -->
+      <div>
+        <label for="text-case" class="block font-semibold text-slate-700 mb-1">Text Case</label>
+        <select id="text-case" onchange="updateStyles()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <option value="lowercase" selected>lowercase</option>
+          <option value="uppercase">UPPERCASE</option>
+          <option value="capitalize">Capitalize</option>
+          <option value="none">As Typed (Original)</option>
+        </select>
+      </div>
+
+      <!-- Border Styling -->
+      <div>
+        <label for="border-weight" class="block font-semibold text-slate-700 mb-1">Border Weight</label>
+        <select id="border-weight" onchange="updateStyles()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <option value="1px">Thin (1px)</option>
+          <option value="2px" selected>Medium (2px)</option>
+          <option value="3px">Thick (3px)</option>
+          <option value="4px">Extra Thick (4px)</option>
+          <option value="0px">None (0px)</option>
+        </select>
+      </div>
+
+      <!-- Cell Margin/Padding -->
+      <div>
+        <label for="cell-padding" class="block font-semibold text-slate-700 mb-1">Cell Safety Padding</label>
+        <select id="cell-padding" onchange="updateStyles()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <option value="2px">Tight (2px - Max Font Size)</option>
+          <option value="4px" selected>Balanced (4px)</option>
+          <option value="8px">Comfortable (8px)</option>
+          <option value="12px">Spacious (12px)</option>
+          <option value="16px">Generous (16px)</option>
+          <option value="20px">Extra Large (20px)</option>
+          <option value="24px">Huge (24px)</option>
+          <option value="32px">Maximum (32px)</option>
+        </select>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main A4 Viewport Container -->
+  <main class="print-wrapper mt-6 flex justify-center items-center">
+    
+    <!-- Exact A4 Paper Sheet -->
+    <div id="a4-sheet" class="a4-sheet a4-portrait bg-white shadow-2xl rounded-sm p-[8mm] box-border relative overflow-hidden transition-all duration-300">
+      
+      <!-- Table Element -->
+      <table id="word-table" class="grid-table">
+        <tbody id="table-body">
+          <!-- Dynamically populated rows and cells -->
+        </tbody>
+      </table>
+
+    </div>
+
+  </main>
+
+  <script>
+    // Default list of 36 words
+    const defaultWords = [
+      "be", "become", "begin", "break", "build", "choose",
+      "come", "do", "find", "get", "give", "go",
+      "have", "hold", "keep", "know", "lead", "leave",
+      "let", "make", "meet", "overcome", "put", "read",
+      "run", "see", "send", "set", "show", "speak",
+      "take", "teach", "think", "understand", "wear", "write"
+    ];
+
+    let currentWords = [...defaultWords];
+
+    /**
+     * Parse text input based on selected delimiter settings
+     */
+    function parseWordsFromText(text) {
+      const delimiterType = document.getElementById('delimiter-select').value;
+      let delimiter = '\n';
+
+      if (delimiterType === 'comma') delimiter = ',';
+      else if (delimiterType === 'semicolon') delimiter = ';';
+      else if (delimiterType === 'space') delimiter = ' ';
+      else if (delimiterType === 'tab') delimiter = '\t';
+      else if (delimiterType === 'custom') {
+        delimiter = document.getElementById('custom-delimiter').value || '\n';
+      }
+
+      if (!text || !text.trim()) return [];
+
+      let rawItems = [];
+      if (delimiterType === 'newline') {
+        rawItems = text.split(/\r?\n/);
+      } else if (delimiter === ' ') {
+        rawItems = text.split(/\s+/);
+      } else {
+        rawItems = text.split(delimiter);
+      }
+
+      return rawItems.map(item => item.trim()).filter(item => item.length > 0);
+    }
+
+    /**
+     * Handle Delimiter dropdown selection change
+     */
+    function handleDelimiterChange() {
+      const type = document.getElementById('delimiter-select').value;
+      const customContainer = document.getElementById('custom-delimiter-container');
+      
+      if (type === 'custom') {
+        customContainer.classList.remove('hidden');
+      } else {
+        customContainer.classList.add('hidden');
+      }
+
+      updateWordsFromInput();
+    }
+
+    /**
+     * Update current word list from textarea input and rebuild grid
+     */
+    function updateWordsFromInput() {
+      const textarea = document.getElementById('raw-text-input');
+      const parsed = parseWordsFromText(textarea.value);
+      
+      currentWords = parsed;
+      
+      const badge = document.getElementById('word-count-tag');
+      const mainBadge = document.getElementById('grid-status-badge');
+      badge.textContent = `${parsed.length} items parsed`;
+      mainBadge.textContent = `${parsed.length} Words Loaded • Auto-fitting text per cell`;
+
+      buildTable();
+    }
+
+    /**
+     * Reset text input to original default 36 verbs
+     */
+    function resetToDefaultWords() {
+      document.getElementById('delimiter-select').value = 'newline';
+      document.getElementById('custom-delimiter-container').classList.add('hidden');
+      document.getElementById('raw-text-input').value = defaultWords.join('\n');
+      updateWordsFromInput();
+    }
+
+    /**
+     * Build the table structure based on column and row configurations
+     */
+    function buildTable() {
+      const gridLayout = document.getElementById('grid-layout').value;
+      const [cols, rows] = gridLayout.split('x').map(Number);
+      const tbody = document.getElementById('table-body');
+      
+      tbody.innerHTML = '';
+
+      let wordIndex = 0;
+      const rowHeightPercent = (100 / rows).toFixed(4) + '%';
+      const colWidthPercent = (100 / cols).toFixed(4) + '%';
+
+      for (let r = 0; r < rows; r++) {
+        const tr = document.createElement('tr');
+        tr.style.height = rowHeightPercent;
+
+        for (let c = 0; c < cols; c++) {
+          const td = document.createElement('td');
+          td.className = 'grid-cell';
+          td.style.width = colWidthPercent;
+
+          if (wordIndex < currentWords.length) {
+            const wordSpan = document.createElement('span');
+            wordSpan.className = 'word-text';
+            wordSpan.dataset.word = currentWords[wordIndex];
+            wordSpan.textContent = currentWords[wordIndex];
+            td.appendChild(wordSpan);
+            wordIndex++;
+          }
+
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+
+      updateStyles(false); // Update styling without triggers
+      fitAllWords(); // Run text auto-fitter
+    }
+
+    /**
+     * Apply visual custom styles (borders, fonts, case, padding)
+     */
+    function updateStyles(shouldRefit = true) {
+      const fontFamily = document.getElementById('font-family').value;
+      const textCase = document.getElementById('text-case').value;
+      const borderWeight = document.getElementById('border-weight').value;
+      const cellPadding = document.getElementById('cell-padding').value;
+
+      const cells = document.querySelectorAll('.grid-cell');
+      const spans = document.querySelectorAll('.word-text');
+
+      cells.forEach(cell => {
+        cell.style.border = `${borderWeight} solid #000000`;
+        cell.style.padding = cellPadding;
+      });
+
+      spans.forEach(span => {
+        span.style.fontFamily = fontFamily;
+        if (textCase === 'none') {
+          span.style.textTransform = 'none';
+        } else {
+          span.style.textTransform = textCase;
+        }
+      });
+
+      if (shouldRefit) {
+        fitAllWords();
+      }
+    }
+
+    /**
+     * Binary Search Auto-Fitter Engine
+     * Calculates the exact maximum font-size in pixels so each word spans
+     * as large as possible inside its table cell without overflowing.
+     */
+    function fitWordInCell(span) {
+      const cell = span.parentElement;
+      if (!cell) return;
+
+      // Reset font size to measure baseline
+      let minSize = 6;
+      let maxSize = 300;
+      let optimalSize = minSize;
+
+      // Determine printable boundaries of cell
+      const computedStyle = window.getComputedStyle(cell);
+      const paddingX = (parseFloat(computedStyle.paddingLeft) || 0) + (parseFloat(computedStyle.paddingRight) || 0);
+      const paddingY = (parseFloat(computedStyle.paddingTop) || 0) + (parseFloat(computedStyle.paddingBottom) || 0);
+
+      // Max allowable internal width and height
+      const maxWidth = cell.clientWidth - paddingX - 2;
+      const maxHeight = cell.clientHeight - paddingY - 2;
+
+      if (maxWidth <= 0 || maxHeight <= 0) return;
+
+      // Binary search algorithm for speed and maximum pixel accuracy
+      while (minSize <= maxSize) {
+        const mid = Math.floor((minSize + maxSize) / 2);
+        span.style.fontSize = `${mid}px`;
+
+        // Measure text box bounding rect
+        const textWidth = span.offsetWidth;
+        const textHeight = span.offsetHeight;
+
+        if (textWidth <= maxWidth && textHeight <= maxHeight) {
+          optimalSize = mid; // Fits! Try a larger font size
+          minSize = mid + 1;
+        } else {
+          maxSize = mid - 1; // Overflow! Try a smaller font size
+        }
+      }
+
+      // Apply the best fitting font size
+      span.style.fontSize = `${optimalSize}px`;
+    }
+
+    /**
+     * Re-calculates and fits all loaded words
+     */
+    function fitAllWords() {
+      const spans = document.querySelectorAll('.word-text');
+      spans.forEach(span => fitWordInCell(span));
+    }
+
+    /**
+     * Layout update trigger
+     */
+    function updateLayout() {
+      buildTable();
+    }
+
+    // Window resize handler with auto debouncing
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        fitAllWords();
+      }, 150);
+    });
+
+    // Ensure re-fit runs before triggering browser print dialog
+    window.addEventListener('beforeprint', () => {
+      fitAllWords();
+    });
+
+    // Initial setup when DOM is fully loaded
+    window.addEventListener('load', () => {
+      // Set initial textarea content
+      document.getElementById('raw-text-input').value = defaultWords.join('\n');
+      buildTable();
+      // Second pass after web fonts load
+      document.fonts.ready.then(() => {
+        fitAllWords();
+      });
+    });
+  </script>
+</body>
+</html>
