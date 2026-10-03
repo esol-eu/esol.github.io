@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ransom Note Generator</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts for rich magazine clipping variety -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Bebas+Neue&family=Bungee&family=Cinzel:wght@700;900&family=Courier+Prime:ital,wght@0,700;1,700&family=Creepster&family=Lobster&family=Montserrat:wght@800;900&family=Permanent+Marker&family=Playfair+Display:ital,wght@0,900;1,700&family=Press+Start+2P&family=Rock+Salt&family=Rubik+Glitch&family=Special+Elite&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+  
+  <!-- html2canvas for downloading canvas as image -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e1e24;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #4a4a58;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #6b6b7d;
+    }
+
+    /* Ransom Fonts Palette */
+    .font-abril { font-family: 'Abril Fatface', serif; }
+    .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+    .font-bungee { font-family: 'Bungee', cursive; }
+    .font-cinzel { font-family: 'Cinzel', serif; }
+    .font-courier { font-family: 'Courier Prime', monospace; }
+    .font-creepster { font-family: 'Creepster', cursive; }
+    .font-lobster { font-family: 'Lobster', cursive; }
+    .font-montserrat { font-family: 'Montserrat', sans-serif; }
+    .font-marker { font-family: 'Permanent Marker', cursive; }
+    .font-playfair { font-family: 'Playfair Display', serif; }
+    .font-pixel { font-family: 'Press Start 2P', monospace; }
+    .font-rock { font-family: 'Rock Salt', cursive; }
+    .font-glitch { font-family: 'Rubik Glitch', cursive; }
+    .font-typewriter { font-family: 'Special Elite', cursive; }
+    .font-gothic { font-family: 'UnifrakturMaguntia', cursive; }
+
+    /* Board Textures */
+    .bg-cork {
+      background-color: #cb9b51;
+      background-image: radial-gradient(#9c6d28 15%, transparent 16%), radial-gradient(#dfb46c 15%, transparent 16%);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+    }
+    .bg-desk {
+      background-color: #2b1d14;
+      background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 2px, transparent 2px, transparent 4px), repeating-linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 10px, transparent 10px, transparent 20px);
+    }
+    .bg-grid {
+      background-size: 24px 24px;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.07) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+      background-color: #121318;
+    }
+
+    /* Paper Cutout Textures & Edge Clip-paths */
+    .clip-torn-1 {
+      clip-path: polygon(2% 4%, 96% 1%, 99% 93%, 94% 98%, 3% 96%, 0% 8%);
+    }
+    .clip-torn-2 {
+      clip-path: polygon(0% 0%, 100% 4%, 97% 96%, 3% 100%, 1% 50%);
+    }
+    .clip-torn-3 {
+      clip-path: polygon(4% 0%, 98% 3%, 95% 95%, 1% 97%);
+    }
+    .clip-torn-4 {
+      clip-path: polygon(1% 3%, 99% 0%, 96% 98%, 4% 94%, 0% 45%);
+    }
+
+    /* Fullscreen Board Styling for Interactive Whiteboards & Projectors */
+    #board-container:fullscreen,
+    #board-container:-webkit-full-screen {
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none !important;
+      max-height: none !important;
+      border: none !important;
+      border-radius: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 3rem !important;
+      box-sizing: border-box !important;
+    }
+
+    /* Custom Animations */
+    @keyframes popIn {
+      0% { transform: scale(0.6) rotate(-10deg); opacity: 0; }
+      70% { transform: scale(1.05) rotate(2deg); }
+      100% { opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    .note-cutout {
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      user-select: none;
+    }
+    .note-cutout:hover {
+      z-index: 30 !important;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.4) !important;
+    }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col font-sans antialiased selection:bg-red-600 selection:text-white">
+
+  <!-- Header Banner -->
+  <header class="bg-zinc-900 border-b border-zinc-800 py-3 px-4 sm:px-6 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40 shadow-xl">
+    <div class="flex items-center gap-3">
+      <!-- Logo constructed like a mini ransom note -->
+      <div class="flex items-center gap-1 font-bold text-xl tracking-wider select-none">
+        <span class="bg-red-600 text-white px-2 py-0.5 transform -rotate-6 font-bebas text-2xl shadow">R</span>
+        <span class="bg-yellow-400 text-black px-2 py-0.5 transform rotate-3 font-typewriter text-lg shadow">A</span>
+        <span class="bg-white text-black px-2 py-0.5 transform -rotate-3 font-gothic text-xl shadow">N</span>
+        <span class="bg-blue-600 text-white px-2 py-0.5 transform rotate-6 font-marker text-lg shadow">S</span>
+        <span class="bg-zinc-800 text-yellow-300 border border-yellow-300 px-2 py-0.5 transform -rotate-2 font-pixel text-sm shadow">O</span>
+        <span class="bg-pink-600 text-white px-2 py-0.5 transform rotate-4 font-glitch text-lg shadow">M</span>
+      </div>
+      <span class="hidden md:inline text-xs bg-zinc-800 text-zinc-400 px-2 py-1 rounded border border-zinc-700 font-mono">Cutout Studio</span>
+    </div>
+
+    <!-- Quick Actions Header Buttons -->
+    <div class="flex items-center gap-2">
+      <button id="btn-fullscreen" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow transition" title="Toggle Full Screen for Whiteboard/Projector">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+        <span id="fullscreen-btn-text">Full Screen</span>
+      </button>
+
+      <button id="btn-sound-toggle" class="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 text-xs flex items-center gap-1.5 transition">
+        <svg id="icon-sound-on" class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+        <span id="sound-status-text">Audio: ON</span>
+      </button>
+
+      <button id="btn-share-url" class="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+        <span>Share Link</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
+    <!-- Control Sidebar -->
+    <aside class="w-full lg:w-96 bg-zinc-900/90 border-b lg:border-b-0 lg:border-r border-zinc-800 p-4 sm:p-5 flex flex-col gap-5 overflow-y-auto z-20 shrink-0">
+      
+      <!-- Message Input -->
+      <div class="flex flex-col gap-2">
+        <div class="flex justify-between items-center">
+          <label for="text-input" class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            Secret Message
+          </label>
+          <span id="char-count" class="text-[10px] font-mono text-zinc-500">0 / 250</span>
+        </div>
+        <textarea id="text-input" rows="3" maxlength="250" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 font-mono resize-none transition" placeholder="Type your secret message here..."></textarea>
+      </div>
+
+      <!-- Quick Text Presets -->
+      <div class="flex flex-col gap-1.5">
+        <span class="text-[11px] font-semibold text-zinc-400">Quick Samples:</span>
+        <div class="flex flex-wrap gap-1.5">
+          <button class="btn-preset text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700 transition" data-text="BRING THE UNMARKED CASSETTE TO THE PARK AT MIDNIGHT. NO POLICE.">Detective Secret</button>
+          <button class="btn-preset text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700 transition" data-text="YOU ARE INVITED TO MY TOP SECRET BIRTHDAY BASH!">Party Invite</button>
+          <button class="btn-preset text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700 transition" data-text="SEND COFFEE AND DONUTS IMMEDIATELY!">Coffee Emergency</button>
+          <button class="btn-preset text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded border border-zinc-700 transition" data-text="HAPPY VALENTINE TO MY FAVORITE PARTNER IN CRIME!">Love Note</button>
+        </div>
+      </div>
+
+      <hr class="border-zinc-800">
+
+      <!-- Cutout Mode & Palette Controls -->
+      <div class="space-y-4">
+        
+        <!-- Render Granularity Mode -->
+        <div>
+          <label class="text-xs font-bold uppercase tracking-wider text-zinc-300 block mb-2">Cutout Style Mode</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button id="mode-word" class="btn-mode px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-medium text-center border border-red-500 shadow transition" data-mode="word">
+              By Word
+            </button>
+            <button id="mode-character" class="btn-mode px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium text-center border border-zinc-700 transition" data-mode="char">
+              By Letter
+            </button>
+            <button id="mode-hybrid" class="btn-mode px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium text-center border border-zinc-700 transition" data-mode="hybrid">
+              Hybrid Mix
+            </button>
+          </div>
+        </div>
+
+        <!-- Color Palette Theme Preset -->
+        <div>
+          <label class="text-xs font-bold uppercase tracking-wider text-zinc-300 block mb-2">Magazine Color Theme</label>
+          <select id="select-theme" class="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500">
+            <option value="classic">Classic Newspaper & Glossy (Vibrant Multi)</option>
+            <option value="vintage">Vintage Sepia & Noir (1950s Detective)</option>
+            <option value="neon">Cyberpunk Neon (High Voltage Cutout)</option>
+            <option value="monochrome">Grayscale / Black & White Newsprint</option>
+            <option value="pastel">Pop Magazine Pastel</option>
+          </select>
+        </div>
+
+        <!-- Board Background Selection -->
+        <div>
+          <label class="text-xs font-bold uppercase tracking-wider text-zinc-300 block mb-2">Background Surface</label>
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <button class="btn-bg p-2 rounded border border-red-500 bg-zinc-900 text-[10px] text-zinc-300 font-bold h-10 flex items-center justify-center shadow" data-bg="bg-none" title="No Background">None</button>
+            <button class="btn-bg p-2 rounded border border-zinc-700 bg-white text-zinc-950 text-[10px] font-bold h-10 flex items-center justify-center shadow" data-bg="bg-white-plain" title="100% Plain White">Plain White</button>
+            <button class="btn-bg p-2 rounded border border-zinc-700 bg-black text-white text-[10px] font-bold h-10 flex items-center justify-center shadow" data-bg="bg-black-plain" title="100% Plain Black">Plain Black</button>
+            <button class="btn-bg p-2 rounded border border-zinc-700 bg-cork hover:border-red-500 text-xs text-zinc-900 font-bold h-10 flex items-center justify-center shadow" data-bg="bg-cork" title="Corkboard"></button>
+            <button class="btn-bg p-2 rounded border border-zinc-700 bg-desk hover:border-red-500 text-xs text-amber-200 font-bold h-10 flex items-center justify-center shadow" data-bg="bg-desk" title="Dark Wooden Desk"></button>
+            <button class="btn-bg p-2 rounded border border-zinc-700 bg-grid hover:border-red-500 text-xs text-zinc-400 font-bold h-10 flex items-center justify-center shadow" data-bg="bg-grid" title="Dark Grid"></button>
+          </div>
+        </div>
+
+        <!-- Global Word Scale Slider -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label for="slider-word-scale" class="text-xs font-bold uppercase tracking-wider text-zinc-300">Global Word Size</label>
+            <span id="word-scale-val" class="text-xs font-mono text-red-400">100%</span>
+          </div>
+          <input type="range" id="slider-word-scale" min="0.5" max="2.5" step="0.05" value="1.0" class="w-full accent-red-600 bg-zinc-950 h-2 rounded cursor-pointer">
+        </div>
+
+        <!-- Random Chaos / Angle Variation Slider -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label for="slider-chaos" class="text-xs font-bold uppercase tracking-wider text-zinc-300">Cutout Rotation Chaos</label>
+            <span id="chaos-val" class="text-xs font-mono text-red-400">Medium</span>
+          </div>
+          <input type="range" id="slider-chaos" min="1" max="5" value="3" class="w-full accent-red-600 bg-zinc-950 h-2 rounded cursor-pointer">
+        </div>
+
+      </div>
+
+      <hr class="border-zinc-800">
+
+      <!-- Primary Action Buttons -->
+      <div class="flex flex-col gap-2 mt-auto">
+        <button id="btn-shuffle" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg flex items-center justify-center gap-2 transition active:scale-[0.98]">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          Re-Cut / Reshuffle Styles
+        </button>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-animate" class="py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-xs rounded-lg border border-zinc-700 flex items-center justify-center gap-1.5 transition">
+            <svg class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+            Animate Type
+          </button>
+          
+          <button id="btn-download" class="py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-xs rounded-lg border border-zinc-700 flex items-center justify-center gap-1.5 transition">
+            <svg class="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Save Image
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Display Board Canvas Area -->
+    <section class="flex-1 bg-zinc-950 p-4 sm:p-8 flex flex-col items-center justify-center overflow-auto relative min-h-[400px]">
+      
+      <!-- Board Outer Frame -->
+      <div id="board-container" class="bg-none relative w-full max-w-4xl min-h-[350px] sm:min-h-[480px] rounded-2xl p-4 sm:p-8 shadow-2xl border-2 border-zinc-800/60 flex flex-col justify-center items-center transition-all duration-300 overflow-hidden">
+        
+        <!-- Full Screen Exit Button -->
+        <button id="btn-exit-fullscreen" class="hidden absolute top-4 right-4 z-50 bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-bold shadow-2xl flex items-center gap-1.5 transition">
+          <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          Exit Full Screen
+        </button>
+
+        <!-- Ransom Note Container (where cutouts are rendered) -->
+        <div id="ransom-board" class="flex flex-wrap items-center justify-center gap-x-1.5 sm:gap-x-2.5 gap-y-2 sm:gap-y-3.5 max-w-full p-2 sm:p-4 rounded-xl z-10 min-h-[180px]">
+          <!-- Cutout elements will be dynamically injected here -->
+        </div>
+
+      </div>
+
+      <!-- Helper Notice -->
+      <div class="mt-4 text-center">
+        <p class="text-xs text-zinc-500 font-mono flex items-center justify-center gap-1">
+          <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          Tip: Hover over words for size controls (A- / A+), or click any cutout to re-roll its style!
+        </p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Toast Notification Overlay -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-zinc-900 border border-zinc-700 text-zinc-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none z-50">
+    <div id="toast-icon" class="text-green-400">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    </div>
+    <span id="toast-msg" class="text-xs font-semibold">Action completed successfully!</span>
+  </div>
+
+  <script>
+    /* Global Application State */
+    const state = {
+      text: "don't let the cat out of the bag",
+      mode: "word", // 'char', 'word', 'hybrid'
+      theme: "classic",
+      bg: "bg-none",
+      wordScale: 1.0,
+      chaos: 3,
+      soundEnabled: true,
+      isAnimating: false,
+      cutoutItems: [] // Stores randomized metadata so global scaling does not reshuffle note styles
+    };
+
+    /* Font Library Categories */
+    const FONTS = [
+      'font-abril', 'font-bebas', 'font-bungee', 'font-cinzel', 'font-courier',
+      'font-creepster', 'font-lobster', 'font-montserrat', 'font-marker',
+      'font-playfair', 'font-pixel', 'font-rock', 'font-glitch',
+      'font-typewriter', 'font-gothic'
+    ];
+
+    /* Preset Themes Color Styles */
+    const THEMES = {
+      classic: [
+        { bg: 'bg-yellow-300', text: 'text-black border-2 border-black' },
+        { bg: 'bg-red-600', text: 'text-white border border-red-800 font-bold' },
+        { bg: 'bg-zinc-900', text: 'text-white border border-zinc-700' },
+        { bg: 'bg-white', text: 'text-zinc-900 border-2 border-zinc-800' },
+        { bg: 'bg-blue-600', text: 'text-yellow-300 border border-blue-800' },
+        { bg: 'bg-emerald-400', text: 'text-black border border-emerald-700' },
+        { bg: 'bg-pink-600', text: 'text-white border border-pink-800' },
+        { bg: 'bg-amber-100', text: 'text-amber-950 border border-amber-300' },
+        { bg: 'bg-zinc-200', text: 'text-red-600 border-2 border-red-600' },
+        { bg: 'bg-orange-500', text: 'text-zinc-950 border border-orange-700' }
+      ],
+      vintage: [
+        { bg: 'bg-amber-100', text: 'text-amber-950 border border-amber-300' },
+        { bg: 'bg-amber-200', text: 'text-zinc-900 border border-amber-400' },
+        { bg: 'bg-stone-300', text: 'text-stone-900 border border-stone-500' },
+        { bg: 'bg-stone-900', text: 'text-amber-100 border border-stone-700' },
+        { bg: 'bg-yellow-100', text: 'text-yellow-900 border border-yellow-300' }
+      ],
+      neon: [
+        { bg: 'bg-fuchsia-600', text: 'text-cyan-300 border border-fuchsia-400 font-bold' },
+        { bg: 'bg-cyan-400', text: 'text-zinc-950 border border-cyan-200 font-bold' },
+        { bg: 'bg-yellow-400', text: 'text-fuchsia-700 border border-yellow-200 font-bold' },
+        { bg: 'bg-zinc-950', text: 'text-green-400 border border-green-500 font-bold' },
+        { bg: 'bg-purple-700', text: 'text-yellow-300 border border-purple-400 font-bold' }
+      ],
+      monochrome: [
+        { bg: 'bg-zinc-950', text: 'text-white border border-zinc-700' },
+        { bg: 'bg-white', text: 'text-zinc-950 border-2 border-zinc-900' },
+        { bg: 'bg-zinc-300', text: 'text-zinc-900 border border-zinc-500' },
+        { bg: 'bg-zinc-800', text: 'text-zinc-100 border border-zinc-600' }
+      ],
+      pastel: [
+        { bg: 'bg-pink-200', text: 'text-pink-900 border border-pink-300' },
+        { bg: 'bg-sky-200', text: 'text-sky-900 border border-sky-300' },
+        { bg: 'bg-emerald-200', text: 'text-emerald-900 border border-emerald-300' },
+        { bg: 'bg-purple-200', text: 'text-purple-900 border border-purple-300' },
+        { bg: 'bg-yellow-200', text: 'text-amber-900 border border-yellow-300' }
+      ]
+    };
+
+    /* Clip Paths for Ragged Edges */
+    const CLIPS = ['clip-torn-1', 'clip-torn-2', 'clip-torn-3', 'clip-torn-4', ''];
+
+    // Web Audio Synthesizer for Paper Crinkle & Scissors Cut Effects
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+      },
+      playSnip() {
+        if (!state.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const bufferSize = this.ctx.sampleRate * 0.04;
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'highpass';
+          filter.frequency.setValueAtTime(1200, now);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.035);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          noise.start(now);
+        } catch (e) {}
+      },
+      playShuffle() {
+        if (!state.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        try {
+          for (let i = 0; i < 4; i++) {
+            setTimeout(() => this.playSnip(), i * 35);
+          }
+        } catch (e) {}
+      }
+    };
+
+    function getRandomItem(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function getRandomRotation(chaosLevel) {
+      const maxAngle = chaosLevel * 4;
+      return (Math.random() * maxAngle * 2) - maxAngle;
+    }
+
+    /* Generate Single Item Style Model */
+    function generateCutoutItem(text, isWord = false) {
+      const themeList = THEMES[state.theme] || THEMES.classic;
+      const themeStyle = getRandomItem(themeList);
+      const font = getRandomItem(FONTS);
+      const clip = getRandomItem(CLIPS);
+      const rotationDeg = getRandomRotation(state.chaos);
+
+      let formattedText = text;
+      if (!isWord && text.length === 1 && Math.random() > 0.5) {
+        formattedText = Math.random() > 0.5 ? text.toUpperCase() : text.toLowerCase();
+      }
+
+      return {
+        id: 'cutout-' + Math.random().toString(36).substr(2, 9),
+        text: formattedText,
+        isWord,
+        font,
+        clip,
+        bg: themeStyle.bg,
+        textColor: themeStyle.text,
+        rotationDeg,
+        itemScaleFactor: 1.0 // Individual word scale multiplier
+      };
+    }
+
+    /* Build DOM Element for Cutout Item Model */
+    function createCutoutDOMElement(item) {
+      const wrapper = document.createElement('div');
+      wrapper.id = item.id;
+      wrapper.className = `note-cutout group inline-block relative cursor-pointer m-0.5 transition-all duration-150 animate-pop ${item.clip}`;
+      
+      const inner = document.createElement('div');
+      inner.className = `inner-paper relative flex items-center justify-center font-bold select-none shadow-sm leading-none ${item.font} ${item.bg} ${item.textColor} px-1.5 py-1 rounded-sm`;
+      inner.textContent = item.text;
+
+      // Base font size calculations
+      const baseFontSize = item.isWord ? 18 : 22;
+      
+      function applySizingAndTransform() {
+        const currentFontSize = Math.round(baseFontSize * state.wordScale * item.itemScaleFactor);
+        inner.style.fontSize = `${currentFontSize}px`;
+        inner.style.padding = `${Math.max(2, Math.round(currentFontSize * 0.15))}px ${Math.max(4, Math.round(currentFontSize * 0.25))}px`;
+        wrapper.style.transform = `rotate(${item.rotationDeg.toFixed(1)}deg)`;
+      }
+
+      applySizingAndTransform();
+
+      // Individual Word Resizing Hover Controls Overlay
+      const controlsOverlay = document.createElement('div');
+      controlsOverlay.className = 'controls-overlay absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:flex items-center gap-0.5 bg-zinc-900/90 text-white border border-zinc-700 px-1 py-0.5 rounded shadow-lg z-40 text-[10px] pointer-events-auto';
+
+      const btnDecrease = document.createElement('button');
+      btnDecrease.className = 'hover:bg-zinc-700 px-1.5 py-0.5 rounded text-red-400 font-bold';
+      btnDecrease.textContent = 'A-';
+      btnDecrease.title = 'Shrink Word';
+      btnDecrease.addEventListener('click', (e) => {
+        e.stopPropagation();
+        item.itemScaleFactor = Math.max(0.4, item.itemScaleFactor - 0.25);
+        applySizingAndTransform();
+        AudioEngine.playSnip();
+      });
+
+      const btnIncrease = document.createElement('button');
+      btnIncrease.className = 'hover:bg-zinc-700 px-1.5 py-0.5 rounded text-green-400 font-bold';
+      btnIncrease.textContent = 'A+';
+      btnIncrease.title = 'Enlarge Word';
+      btnIncrease.addEventListener('click', (e) => {
+        e.stopPropagation();
+        item.itemScaleFactor = Math.min(3.0, item.itemScaleFactor + 0.25);
+        applySizingAndTransform();
+        AudioEngine.playSnip();
+      });
+
+      controlsOverlay.appendChild(btnDecrease);
+      controlsOverlay.appendChild(btnIncrease);
+      wrapper.appendChild(controlsOverlay);
+
+      wrapper.appendChild(inner);
+
+      // Re-roll single cutout piece on click
+      wrapper.addEventListener('click', (e) => {
+        e.stopPropagation();
+        AudioEngine.playSnip();
+        
+        const newItem = generateCutoutItem(item.text, item.isWord);
+        item.font = newItem.font;
+        item.clip = newItem.clip;
+        item.bg = newItem.bg;
+        item.textColor = newItem.textColor;
+        item.rotationDeg = newItem.rotationDeg;
+
+        wrapper.className = `note-cutout group inline-block relative cursor-pointer m-0.5 transition-all duration-150 ${item.clip}`;
+        inner.className = `inner-paper relative flex items-center justify-center font-bold select-none shadow-sm leading-none ${item.font} ${item.bg} ${item.textColor} px-1.5 py-1 rounded-sm`;
+        applySizingAndTransform();
+      });
+
+      return wrapper;
+    }
+
+    /* Update Sizing Across All Existing DOM Elements Non-Destructively */
+    function updateAllCutoutSizes() {
+      state.cutoutItems.forEach(item => {
+        const wrapper = document.getElementById(item.id);
+        if (!wrapper) return;
+        const inner = wrapper.querySelector('.inner-paper');
+        if (!inner) return;
+
+        const baseFontSize = item.isWord ? 18 : 22;
+        const currentFontSize = Math.round(baseFontSize * state.wordScale * item.itemScaleFactor);
+        inner.style.fontSize = `${currentFontSize}px`;
+        inner.style.padding = `${Math.max(2, Math.round(currentFontSize * 0.15))}px ${Math.max(4, Math.round(currentFontSize * 0.25))}px`;
+      });
+    }
+
+    /* Render Main Note Board */
+    function renderRansomNote(regenerateData = true) {
+      const board = document.getElementById('ransom-board');
+      
+      if (!regenerateData) {
+        updateAllCutoutSizes();
+        return;
+      }
+
+      board.innerHTML = '';
+      state.cutoutItems = [];
+
+      const inputText = state.text.trim();
+      if (!inputText) {
+        board.innerHTML = `<span class="text-zinc-400 font-mono text-sm italic">Type something on the left to generate note...</span>`;
+        return;
+      }
+
+      const words = inputText.split(/\s+/);
+
+      words.forEach((word) => {
+        const wordContainer = document.createElement('div');
+        wordContainer.className = 'inline-flex flex-wrap items-center gap-0.5 my-0.5';
+
+        if (state.mode === 'word') {
+          const item = generateCutoutItem(word, true);
+          state.cutoutItems.push(item);
+          const cutout = createCutoutDOMElement(item);
+          wordContainer.appendChild(cutout);
+        } else if (state.mode === 'char') {
+          for (let i = 0; i < word.length; i++) {
+            const item = generateCutoutItem(word[i], false);
+            state.cutoutItems.push(item);
+            const cutout = createCutoutDOMElement(item);
+            wordContainer.appendChild(cutout);
+          }
+        } else if (state.mode === 'hybrid') {
+          if (word.length <= 3 && Math.random() > 0.4) {
+            const item = generateCutoutItem(word, true);
+            state.cutoutItems.push(item);
+            const cutout = createCutoutDOMElement(item);
+            wordContainer.appendChild(cutout);
+          } else {
+            let i = 0;
+            while (i < word.length) {
+              const takeTwo = (word.length - i >= 2) && Math.random() > 0.5;
+              const chunk = takeTwo ? word.slice(i, i + 2) : word[i];
+              const item = generateCutoutItem(chunk, takeTwo);
+              state.cutoutItems.push(item);
+              const cutout = createCutoutDOMElement(item);
+              wordContainer.appendChild(cutout);
+              i += takeTwo ? 2 : 1;
+            }
+          }
+        }
+
+        board.appendChild(wordContainer);
+      });
+
+      updateURLQuery();
+    }
+
+    function animateTypewriter() {
+      if (state.isAnimating) return;
+      state.isAnimating = true;
+
+      renderRansomNote(true);
+
+      const elements = Array.from(document.querySelectorAll('.note-cutout'));
+      elements.forEach(el => el.style.display = 'none');
+
+      let idx = 0;
+      const interval = setInterval(() => {
+        if (idx < elements.length) {
+          elements[idx].style.display = 'inline-block';
+          AudioEngine.playSnip();
+          idx++;
+        } else {
+          clearInterval(interval);
+          state.isAnimating = false;
+        }
+      }, 70);
+    }
+
+    function parseURLQuery() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const textParam = params.get('text') || params.get('note');
+        if (textParam) {
+          state.text = textParam;
+          document.getElementById('text-input').value = textParam;
+        }
+
+        const modeParam = params.get('mode');
+        if (modeParam && ['char', 'word', 'hybrid'].includes(modeParam)) {
+          state.mode = modeParam;
+          updateModeButtons();
+        }
+
+        const themeParam = params.get('theme');
+        if (themeParam && THEMES[themeParam]) {
+          state.theme = themeParam;
+          document.getElementById('select-theme').value = themeParam;
+        }
+      } catch (e) {}
+    }
+
+    function updateURLQuery() {
+      try {
+        if (window.location.protocol.startsWith('blob:')) return;
+        const url = new URL(window.location.href);
+        url.searchParams.set('text', state.text);
+        url.searchParams.set('mode', state.mode);
+        url.searchParams.set('theme', state.theme);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    }
+
+    function copyShareableLink() {
+      let shareUrl = window.location.href;
+      try {
+        const params = new URLSearchParams({
+          text: state.text,
+          mode: state.mode,
+          theme: state.theme
+        });
+
+        if (window.location.protocol.startsWith('blob:')) {
+          shareUrl = `${window.location.origin}?${params.toString()}`;
+        } else {
+          updateURLQuery();
+          shareUrl = window.location.href;
+        }
+      } catch (e) {}
+
+      const tempInput = document.createElement('input');
+      tempInput.value = shareUrl;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        showToast("Shareable link copied to clipboard!");
+      } catch (err) {
+        showToast("Failed to copy link.");
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    /* Robust Image Export with SVG ForeignObject Fallback */
+    async function downloadAsImage() {
+      showToast("Generating image download...");
+      const boardContainer = document.getElementById('board-container');
+      if (!boardContainer) return;
+
+      // Ensure fonts are loaded
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      // Hide hover controls before capture
+      const overlays = boardContainer.querySelectorAll('.controls-overlay');
+      overlays.forEach(el => el.style.display = 'none');
+
+      try {
+        const canvas = await html2canvas(boardContainer, {
+          backgroundColor: null,
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          onclone: (clonedDoc) => {
+            const clonedBoard = clonedDoc.getElementById('board-container');
+            if (clonedBoard) {
+              clonedBoard.querySelectorAll('.controls-overlay').forEach(el => el.remove());
+            }
+          }
+        });
+
+        const link = document.createElement('a');
+        link.download = `ransom-note-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("Ransom note saved as image!");
+      } catch (err) {
+        console.warn("html2canvas primary capture failed, trying SVG fallback...", err);
+        try {
+          await downloadViaSvgFallback(boardContainer);
+        } catch (fallbackErr) {
+          console.error("Export error:", fallbackErr);
+          showToast("Failed to export image.");
+        }
+      } finally {
+        overlays.forEach(el => el.style.display = '');
+      }
+    }
+
+    /* Fallback SVG Data URI Renderer */
+    function downloadViaSvgFallback(element) {
+      return new Promise((resolve, reject) => {
+        const clone = element.cloneNode(true);
+        clone.querySelectorAll('.controls-overlay').forEach(el => el.remove());
+
+        const width = element.offsetWidth || 800;
+        const height = element.offsetHeight || 500;
+
+        const wrapper = document.createElement('div');
+        wrapper.appendChild(clone);
+
+        const svgData = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+            <foreignObject width="100%" height="100%">
+              <div xmlns="http://www.w3.org/1999/xhtml">
+                <style>
+                  @import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&amp;family=Bebas+Neue&amp;family=Bungee&amp;family=Cinzel:wght@700;900&amp;family=Courier+Prime:ital,wght@0,700;1,700&amp;family=Creepster&amp;family=Lobster&amp;family=Montserrat:wght@800;900&amp;family=Permanent+Marker&amp;family=Playfair+Display:ital,wght@0,900;1,700&amp;family=Press+Start+2P&amp;family=Rock+Salt&amp;family=Rubik+Glitch&amp;family=Special+Elite&amp;family=UnifrakturMaguntia&amp;display=swap');
+                </style>
+                ${wrapper.innerHTML}
+              </div>
+            </foreignObject>
+          </svg>
+        `;
+
+        const img = new Image();
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = width * 2;
+          canvas.height = height * 2;
+          const ctx = canvas.getContext('2d');
+          ctx.scale(2, 2);
+          ctx.drawImage(img, 0, 0);
+          URL.revokeObjectURL(url);
+
+          const link = document.createElement('a');
+          link.download = `ransom-note-${Date.now()}.png`;
+          link.href = canvas.toDataURL('image/png');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showToast("Ransom note saved as image!");
+          resolve();
+        };
+
+        img.onerror = (e) => {
+          URL.revokeObjectURL(url);
+          reject(e);
+        };
+
+        img.src = url;
+      });
+    }
+
+    /* UI Toast Feedback */
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const msgSpan = document.getElementById('toast-msg');
+      msgSpan.textContent = msg;
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    /* Mode Button Active States */
+    function updateModeButtons() {
+      document.querySelectorAll('.btn-mode').forEach(btn => {
+        const mode = btn.getAttribute('data-mode');
+        if (mode === state.mode) {
+          btn.className = 'btn-mode px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-medium text-center border border-red-500 shadow transition';
+        } else {
+          btn.className = 'btn-mode px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium text-center border border-zinc-700 transition';
+        }
+      });
+    }
+
+    function initEventHandlers() {
+      const textInput = document.getElementById('text-input');
+      const charCount = document.getElementById('char-count');
+
+      textInput.value = state.text;
+      charCount.textContent = `${state.text.length} / 250`;
+
+      textInput.addEventListener('input', (e) => {
+        state.text = e.target.value;
+        charCount.textContent = `${state.text.length} / 250`;
+        renderRansomNote(true);
+      });
+
+      // Quick Preset Buttons
+      document.querySelectorAll('.btn-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const presetText = btn.getAttribute('data-text');
+          state.text = presetText;
+          textInput.value = presetText;
+          charCount.textContent = `${presetText.length} / 250`;
+          AudioEngine.playShuffle();
+          renderRansomNote(true);
+        });
+      });
+
+      // Cutout Mode Selection
+      document.querySelectorAll('.btn-mode').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.mode = btn.getAttribute('data-mode');
+          updateModeButtons();
+          AudioEngine.playSnip();
+          renderRansomNote(true);
+        });
+      });
+
+      // Magazine Theme Selection
+      document.getElementById('select-theme').addEventListener('change', (e) => {
+        state.theme = e.target.value;
+        AudioEngine.playShuffle();
+        renderRansomNote(true);
+      });
+
+      // Global Word Scale Slider (Non-Destructive Scale Updates)
+      const wordScaleSlider = document.getElementById('slider-word-scale');
+      const wordScaleVal = document.getElementById('word-scale-val');
+      wordScaleSlider.addEventListener('input', (e) => {
+        state.wordScale = parseFloat(e.target.value);
+        wordScaleVal.textContent = `${Math.round(state.wordScale * 100)}%`;
+        renderRansomNote(false); // Do not regenerate random cutout styles!
+      });
+
+      // Background Surface Switcher
+      document.querySelectorAll('.btn-bg').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.btn-bg').forEach(b => b.classList.replace('border-red-500', 'border-zinc-700'));
+          btn.classList.replace('border-zinc-700', 'border-red-500');
+
+          const bgClass = btn.getAttribute('data-bg');
+          state.bg = bgClass;
+          const boardContainer = document.getElementById('board-container');
+          
+          let baseClasses = 'relative w-full max-w-4xl min-h-[350px] sm:min-h-[480px] rounded-2xl p-4 sm:p-8 shadow-2xl border-2 flex flex-col justify-center items-center transition-all duration-300 overflow-hidden ';
+          
+          if (bgClass === 'bg-white-plain') {
+            boardContainer.className = baseClasses + 'bg-white text-zinc-950 border-zinc-200';
+          } else if (bgClass === 'bg-black-plain') {
+            boardContainer.className = baseClasses + 'bg-black text-white border-zinc-800';
+          } else {
+            boardContainer.className = baseClasses + 'border-zinc-800/60 ' + bgClass;
+          }
+
+          AudioEngine.playSnip();
+        });
+      });
+
+      // Chaos Rotation Slider
+      const chaosSlider = document.getElementById('slider-chaos');
+      const chaosVal = document.getElementById('chaos-val');
+      const chaosLabels = ['Subtle', 'Low', 'Medium', 'High', 'Wild'];
+
+      chaosSlider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        state.chaos = val;
+        chaosVal.textContent = chaosLabels[val - 1];
+        renderRansomNote(true);
+      });
+
+      // Full Screen Mode Handlers for Interactive Whiteboards & Projectors
+      const btnFullscreen = document.getElementById('btn-fullscreen');
+      const btnExitFullscreen = document.getElementById('btn-exit-fullscreen');
+      const boardContainer = document.getElementById('board-container');
+      const fullscreenText = document.getElementById('fullscreen-btn-text');
+
+      function toggleFullScreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          if (boardContainer.requestFullscreen) {
+            boardContainer.requestFullscreen();
+          } else if (boardContainer.webkitRequestFullscreen) {
+            boardContainer.webkitRequestFullscreen();
+          }
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+        }
+      }
+
+      function updateFullscreenUI() {
+        const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        if (isFS) {
+          btnExitFullscreen.classList.remove('hidden');
+          btnExitFullscreen.classList.add('flex');
+          fullscreenText.textContent = "Exit Full Screen";
+        } else {
+          btnExitFullscreen.classList.remove('flex');
+          btnExitFullscreen.classList.add('hidden');
+          fullscreenText.textContent = "Full Screen";
+        }
+      }
+
+      btnFullscreen.addEventListener('click', toggleFullScreen);
+      btnExitFullscreen.addEventListener('click', toggleFullScreen);
+      document.addEventListener('fullscreenchange', updateFullscreenUI);
+      document.addEventListener('webkitfullscreenchange', updateFullscreenUI);
+
+      // Audio Toggle Button
+      document.getElementById('btn-sound-toggle').addEventListener('click', () => {
+        state.soundEnabled = !state.soundEnabled;
+        const statusText = document.getElementById('sound-status-text');
+        const icon = document.getElementById('icon-sound-on');
+        if (state.soundEnabled) {
+          statusText.textContent = "Audio: ON";
+          icon.classList.remove('text-zinc-500');
+          icon.classList.add('text-green-400');
+          AudioEngine.playSnip();
+        } else {
+          statusText.textContent = "Audio: OFF";
+          icon.classList.remove('text-green-400');
+          icon.classList.add('text-zinc-500');
+        }
+      });
+
+      // Primary Action Buttons
+      document.getElementById('btn-shuffle').addEventListener('click', () => {
+        AudioEngine.playShuffle();
+        renderRansomNote(true);
+      });
+
+      document.getElementById('btn-animate').addEventListener('click', () => {
+        animateTypewriter();
+      });
+
+      document.getElementById('btn-download').addEventListener('click', () => {
+        downloadAsImage();
+      });
+
+      document.getElementById('btn-share-url').addEventListener('click', () => {
+        copyShareableLink();
+      });
+    }
+
+    window.onload = function() {
+      parseURLQuery();
+      initEventHandlers();
+      renderRansomNote(true);
+    };
+  </script>
+</body>
+</html>
