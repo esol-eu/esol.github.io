@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhonoPair - Minimal Pairs Distinction Trainer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f6ff',
+                            100: '#e0edff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'wave-bar': 'wave 1s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        wave: {
+                            '0%': { transform: 'scaleY(0.2)' },
+                            '100%': { transform: 'scaleY(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(229, 231, 235, 0.8);
+        }
+        .dark .glass-card {
+            background: rgba(17, 24, 39, 0.85);
+            border: 1px solid rgba(55, 65, 81, 0.5);
+        }
+        .audio-wave-bar {
+            transform-origin: bottom;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans min-h-screen transition-colors duration-200">
+
+    <div id="app" class="max-w-6xl mx-auto px-4 py-6 flex flex-col min-h-screen">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
+                    <i class="fa-solid font-bold fa-ear-listen text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold font-display tracking-tight bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-400 dark:to-blue-400 bg-clip-text text-transparent">
+                        PhonoPair
+                    </h1>
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Chrome Speech-Powered Minimal Pairs Trainer</p>
+                </div>
+            </div>
+
+            <!-- Voice & TTS Controls Toolbar -->
+            <div class="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 text-xs font-medium">
+                <!-- Voice Select -->
+                <div class="flex items-center gap-2 px-2 border-r border-slate-200 dark:border-slate-700">
+                    <i class="fa-solid fa-microphone-lines text-indigo-500"></i>
+                    <select id="voice-select" class="bg-transparent font-medium text-slate-700 dark:text-slate-300 focus:outline-none max-w-[160px] truncate cursor-pointer">
+                        <option value="">Loading Chrome Voices...</option>
+                    </select>
+                </div>
+
+                <!-- Rate / Speed slider -->
+                <div class="flex items-center gap-2 px-2 border-r border-slate-200 dark:border-slate-700">
+                    <i class="fa-solid fa-gauge-high text-indigo-500"></i>
+                    <span id="rate-val" class="w-8 text-center">1.0x</span>
+                    <input type="range" id="rate-range" min="0.5" max="1.3" step="0.05" value="1.0" class="w-16 accent-indigo-600 cursor-pointer">
+                </div>
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" title="Toggle theme">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:block"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex space-x-2 bg-slate-200/60 dark:bg-slate-900 p-1.5 rounded-2xl max-w-md mx-auto mb-8">
+            <button id="tab-quiz" class="nav-tab flex-1 py-2 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-white dark:bg-slate-800 shadow-sm text-indigo-600 dark:text-indigo-400">
+                <i class="fa-solid fa-circle-play"></i> Listening Practice
+            </button>
+            <button id="tab-speak" class="nav-tab flex-1 py-2 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">
+                <i class="fa-solid fa-microphone"></i> Speak Test
+            </button>
+            <button id="tab-study" class="nav-tab flex-1 py-2 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">
+                <i class="fa-solid fa-book-open"></i> Pair Library
+            </button>
+        </nav>
+
+        <!-- Category Selector -->
+        <div class="mb-6 flex flex-wrap items-center justify-center gap-2" id="category-chips">
+            <!-- Dynamically populated category chips -->
+        </div>
+
+        <!-- MAIN VIEW CONTAINER -->
+        <main class="flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full">
+
+            <!-- 1. QUIZ MODE VIEW -->
+            <div id="view-quiz" class="space-y-6">
+                <!-- Score and Stats Bar -->
+                <div class="flex items-center justify-between px-4 py-2 glass-card rounded-2xl">
+                    <div class="flex items-center gap-4">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Streak</span>
+                        <div class="flex items-center gap-1 font-bold text-amber-500">
+                            <i class="fa-solid fa-fire"></i>
+                            <span id="quiz-streak">0</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Score</span>
+                        <span id="quiz-score" class="font-bold text-slate-800 dark:text-slate-100">0 / 0</span>
+                    </div>
+                    <button id="btn-reset-stats" class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <i class="fa-solid fa-rotate"></i> Reset
+                    </button>
+                </div>
+
+                <!-- Main Target Sound Card -->
+                <div class="glass-card p-8 md:p-12 rounded-3xl shadow-xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+                    
+                    <div id="phoneme-badge" class="px-3 py-1 bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-mono text-xs font-bold rounded-full mb-6">
+                        Contrast: /ɪ/ vs /iː/
+                    </div>
+
+                    <!-- Audio Visualizer Circle -->
+                    <div class="relative mb-8 group cursor-pointer" id="btn-play-secret">
+                        <div id="pulse-ring" class="absolute -inset-4 rounded-full bg-indigo-500/20 dark:bg-indigo-500/10 transition-all duration-300"></div>
+                        <button class="relative w-28 h-28 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white text-3xl flex items-center justify-center shadow-lg shadow-indigo-500/30 hover:scale-105 active:scale-95 transition-all">
+                            <i id="quiz-play-icon" class="fa-solid fa-volume-high"></i>
+                        </button>
+                    </div>
+
+                    <!-- Sound Wave Visualizer Bars -->
+                    <div id="wave-animation" class="flex items-end gap-1 h-6 mb-4 opacity-0 transition-opacity duration-200">
+                        <div class="w-1 bg-indigo-500 rounded-full h-full animate-wave-bar" style="animation-delay: 0.1s"></div>
+                        <div class="w-1 bg-indigo-500 rounded-full h-full animate-wave-bar" style="animation-delay: 0.3s"></div>
+                        <div class="w-1 bg-indigo-500 rounded-full h-full animate-wave-bar" style="animation-delay: 0.2s"></div>
+                        <div class="w-1 bg-indigo-500 rounded-full h-full animate-wave-bar" style="animation-delay: 0.4s"></div>
+                        <div class="w-1 bg-indigo-500 rounded-full h-full animate-wave-bar" style="animation-delay: 0.15s"></div>
+                    </div>
+
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">
+                        Click speaker to hear the hidden word, then pick what you heard:
+                    </p>
+
+                    <!-- Choice Buttons -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-md">
+                        <button id="choice-a" class="choice-btn group p-5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl hover:border-indigo-500 dark:hover:border-indigo-500 transition-all flex flex-col items-center justify-center hover:shadow-md">
+                            <span class="word-text text-2xl font-extrabold text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 mb-1">Ship</span>
+                            <span class="ipa-text font-mono text-xs text-slate-400">/ʃɪp/</span>
+                        </button>
+
+                        <button id="choice-b" class="choice-btn group p-5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl hover:border-indigo-500 dark:hover:border-indigo-500 transition-all flex flex-col items-center justify-center hover:shadow-md">
+                            <span class="word-text text-2xl font-extrabold text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 mb-1">Sheep</span>
+                            <span class="ipa-text font-mono text-xs text-slate-400">/ʃiːp/</span>
+                        </button>
+                    </div>
+
+                    <!-- Feedback Banner (Hidden initially) -->
+                    <div id="quiz-feedback" class="hidden mt-6 p-4 rounded-2xl w-full max-w-md text-left transition-all">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div id="feedback-icon" class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"></div>
+                            <span id="feedback-title" class="font-bold text-base">Correct!</span>
+                        </div>
+                        <p id="feedback-tip" class="text-xs leading-relaxed opacity-90 mb-3"></p>
+                        
+                        <!-- Listen both side by side -->
+                        <div class="pt-2 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Hear Comparison:</span>
+                            <div class="flex gap-2">
+                                <button id="play-side-a" class="px-3 py-1 bg-white/80 dark:bg-slate-800/80 rounded-lg text-xs font-semibold hover:bg-white transition-colors flex items-center gap-1 shadow-sm">
+                                    <i class="fa-solid fa-volume-low"></i> <span id="side-a-name">Word A</span>
+                                </button>
+                                <button id="play-side-b" class="px-3 py-1 bg-white/80 dark:bg-slate-800/80 rounded-lg text-xs font-semibold hover:bg-white transition-colors flex items-center gap-1 shadow-sm">
+                                    <i class="fa-solid fa-volume-low"></i> <span id="side-b-name">Word B</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Next Question Button -->
+                    <button id="btn-next-question" class="hidden mt-6 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-2xl shadow-lg shadow-indigo-600/25 transition-all flex items-center gap-2">
+                        <span>Next Pair</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. SPEAK TEST MODE VIEW -->
+            <div id="view-speak" class="hidden space-y-6">
+                <div class="glass-card p-8 rounded-3xl shadow-xl flex flex-col items-center text-center">
+                    <div class="px-3 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold rounded-full mb-6">
+                        Chrome Speech Recognition
+                    </div>
+
+                    <h2 class="text-xl font-bold mb-2">Pronunciation Practice</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mb-8">
+                        Try saying the target word clearly into your microphone. See if Chrome's speech recognition can distinguish your pronunciation!
+                    </p>
+
+                    <!-- Target Word Display -->
+                    <div class="bg-slate-100 dark:bg-slate-800/80 p-6 rounded-2xl w-full max-w-sm mb-6 flex flex-col items-center">
+                        <span class="text-xs uppercase font-bold text-slate-400 tracking-wider mb-1">Target Word</span>
+                        <div id="speak-target-word" class="text-4xl font-extrabold text-indigo-600 dark:text-indigo-400 mb-1">
+                            Sheep
+                        </div>
+                        <div id="speak-target-ipa" class="font-mono text-sm text-slate-500">/ʃiːp/</div>
+                        
+                        <button id="btn-speak-listen-target" class="mt-3 text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold">
+                            <i class="fa-solid fa-volume-high"></i> Listen to Native Model
+                        </button>
+                    </div>
+
+                    <!-- Mic Button -->
+                    <button id="btn-start-mic" class="w-20 h-20 rounded-full bg-emerald-500 text-white text-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95 transition-all mb-4">
+                        <i id="mic-icon" class="fa-solid fa-microphone"></i>
+                    </button>
+                    <p id="mic-status" class="text-xs font-medium text-slate-500 mb-6">Click microphone and speak the word</p>
+
+                    <!-- Speech Results Box -->
+                    <div id="speak-result-box" class="hidden w-full max-w-sm p-4 rounded-2xl border text-center transition-all">
+                        <div class="text-xs font-semibold uppercase tracking-wider mb-1 text-slate-500">Detected Word</div>
+                        <div id="speak-detected-word" class="text-2xl font-bold mb-1">"..."</div>
+                        <div id="speak-feedback-text" class="text-xs font-medium"></div>
+                    </div>
+
+                    <div class="mt-8 flex gap-3">
+                        <button id="btn-speak-prev" class="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800">
+                            <i class="fa-solid fa-chevron-left mr-1"></i> Prev Word
+                        </button>
+                        <button id="btn-speak-next" class="px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-semibold hover:opacity-90">
+                            Next Word <i class="fa-solid fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. STUDY LIBRARY VIEW -->
+            <div id="view-study" class="hidden space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold">Minimal Pairs Library</h2>
+                        <p class="text-xs text-slate-500">Browse contrast pairs and study articulation tips.</p>
+                    </div>
+
+                    <button id="btn-open-custom-modal" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> Add Custom Pair
+                    </button>
+                </div>
+
+                <!-- Pairs Grid -->
+                <div id="study-pairs-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic pair cards inserted here -->
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Custom Pair Creator Modal -->
+        <div id="custom-pair-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold">Add Custom Minimal Pair</h3>
+                    <button id="btn-close-modal" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <form id="form-custom-pair" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Category / Sound Contrast</label>
+                        <input type="text" id="input-category" placeholder="e.g., /p/ vs /b/" required class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-sm focus:ring-2 focus:ring-indigo-500">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Word 1</label>
+                            <input type="text" id="input-word1" placeholder="e.g., Pen" required class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-sm focus:ring-2 focus:ring-indigo-500">
+                            <input type="text" id="input-ipa1" placeholder="IPA (e.g. /pɛn/)" class="w-full px-3 py-1.5 mt-1 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-xs font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Word 2</label>
+                            <input type="text" id="input-word2" placeholder="e.g., Ben" required class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-sm focus:ring-2 focus:ring-indigo-500">
+                            <input type="text" id="input-ipa2" placeholder="IPA (e.g. /bɛn/)" class="w-full px-3 py-1.5 mt-1 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-xs font-mono">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Articulation Tip</label>
+                        <textarea id="input-tip" rows="2" placeholder="Explain how mouth/tongue positions differ..." class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-sm focus:ring-2 focus:ring-indigo-500"></textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" id="btn-cancel-modal" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">Cancel</button>
+                        <button type="submit" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">Save Pair</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 text-center text-xs text-slate-400 py-4 border-t border-slate-200 dark:border-slate-800">
+            PhonoPair Web App &bull; Powered by Web Speech API & Text-to-Speech
+        </footer>
+    </div>
+
+    <script>
+        const DEFAULT_MINIMAL_PAIRS = [
+            // ==========================================
+            // CATEGORY 1: /ɪ/ vs /iː/ (20 Pairs)
+            // ==========================================
+            { id: '1', category: '/ɪ/ vs /iː/', word1: 'Ship', ipa1: '/ʃɪp/', word2: 'Sheep', ipa2: '/ʃiːp/', tip: '/ɪ/ is short and relaxed. /iː/ is long with smiling lips and tense tongue.' },
+            { id: '2', category: '/ɪ/ vs /iː/', word1: 'Sit', ipa1: '/sɪt/', word2: 'Seat', ipa2: '/siːt/', tip: 'Short relaxed vowel in "sit" vs tense, spread lips in "seat".' },
+            { id: '3', category: '/ɪ/ vs /iː/', word1: 'Fit', ipa1: '/fɪt/', word2: 'Feet', ipa2: '/fiːt/', tip: '"Fit" has quick lax vowel; "feet" holds the /iː/ sound longer.' },
+            { id: '4', category: '/ɪ/ vs /iː/', word1: 'Bit', ipa1: '/bɪt/', word2: 'Beet', ipa2: '/biːt/', tip: 'Keep jaw slightly relaxed for "bit"; pull lip corners back for "beet".' },
+            { id: '5', category: '/ɪ/ vs /iː/', word1: 'Slip', ipa1: '/slɪp/', word2: 'Sleep', ipa2: '/sliːp/', tip: 'Lax short /ɪ/ vs high tense /iː/ vowel sound.' },
+            { id: '6', category: '/ɪ/ vs /iː/', word1: 'Hit', ipa1: '/hɪt/', word2: 'Heat', ipa2: '/hiːt/', tip: '"Hit" uses short lax vowel; "heat" requires smiling, tense tongue.' },
+            { id: '7', category: '/ɪ/ vs /iː/', word1: 'Lip', ipa1: '/lɪp/', word2: 'Leap', ipa2: '/liːp/', tip: 'Short /ɪ/ vs prolonged high front /iː/ sound.' },
+            { id: '8', category: '/ɪ/ vs /iː/', word1: 'Chip', ipa1: '/tʃɪp/', word2: 'Cheap', ipa2: '/tʃiːp/', tip: 'Contrast between lax /ɪ/ and tense /iː/.' },
+            { id: '9', category: '/ɪ/ vs /iː/', word1: 'Live', ipa1: '/lɪv/', word2: 'Leave', ipa2: '/liːv/', tip: '"Live" has short lax vowel; "leave" uses longer tense vowel.' },
+            { id: '10', category: '/ɪ/ vs /iː/', word1: 'Grin', ipa1: '/ɡrɪn/', word2: 'Green', ipa2: '/ɡriːn/', tip: 'Relaxed mouth for "grin"; tense high tongue position for "green".' },
+            { id: '11', category: '/ɪ/ vs /iː/', word1: 'Mill', ipa1: '/mɪl/', word2: 'Meal', ipa2: '/miːl/', tip: 'Lax /ɪ/ in "mill" vs tense /iː/ in "meal".' },
+            { id: '12', category: '/ɪ/ vs /iː/', word1: 'Pitch', ipa1: '/pɪtʃ/', word2: 'Peach', ipa2: '/piːtʃ/', tip: 'Short, unrounded /ɪ/ sound vs tense, long /iː/.' },
+            { id: '13', category: '/ɪ/ vs /iː/', word1: 'Sick', ipa1: '/sɪk/', word2: 'Seek', ipa2: '/siːk/', tip: '"Sick" uses short lax vowel; "seek" uses tense front vowel.' },
+            { id: '14', category: '/ɪ/ vs /iː/', word1: 'Sin', ipa1: '/sɪn/', word2: 'Seen', ipa2: '/siːn/', tip: 'Short vowel in "sin" vs stretched tense lips in "seen".' },
+            { id: '15', category: '/ɪ/ vs /iː/', word1: 'Rich', ipa1: '/rɪtʃ/', word2: 'Reach', ipa2: '/riːtʃ/', tip: 'Lax tongue for "rich"; tight high tongue for "reach".' },
+            { id: '16', category: '/ɪ/ vs /iː/', word1: 'Fill', ipa1: '/fɪl/', word2: 'Feel', ipa2: '/fiːl/', tip: 'Quick lax /ɪ/ vs prolonged /iː/ sound.' },
+            { id: '17', category: '/ɪ/ vs /iː/', word1: 'Bin', ipa1: '/bɪn/', word2: 'Bean', ipa2: '/biːn/', tip: 'Short relaxed /ɪ/ in "bin" vs tense /iː/ in "bean".' },
+            { id: '18', category: '/ɪ/ vs /iː/', word1: 'Dip', ipa1: '/dɪp/', word2: 'Deep', ipa2: '/diːp/', tip: 'Short vowel duration vs long tense vowel duration.' },
+            { id: '19', category: '/ɪ/ vs /iː/', word1: 'Fist', ipa1: '/fɪst/', word2: 'Feast', ipa2: '/fiːst/', tip: 'Lax /ɪ/ in "fist" vs tense /iː/ in "feast".' },
+            { id: '20', category: '/ɪ/ vs /iː/', word1: 'Mitt', ipa1: '/mɪt/', word2: 'Meet', ipa2: '/miːt/', tip: 'Short lax vowel vs tense smiling vowel.' },
+
+            // ==========================================
+            // CATEGORY 2: /æ/ vs /ɛ/ (20 Pairs)
+            // ==========================================
+            { id: '21', category: '/æ/ vs /ɛ/', word1: 'Bat', ipa1: '/bæt/', word2: 'Bet', ipa2: '/bɛt/', tip: '/æ/ opens jaw wide downwards; /ɛ/ has a mid-open jaw.' },
+            { id: '22', category: '/æ/ vs /ɛ/', word1: 'Man', ipa1: '/mæn/', word2: 'Men', ipa2: '/mɛn/', tip: 'Drop jaw lower for "man"; raise jaw slightly higher for "men".' },
+            { id: '23', category: '/æ/ vs /ɛ/', word1: 'Pan', ipa1: '/pæn/', word2: 'Pen', ipa2: '/pɛn/', tip: '"Pan" opens mouth wider; "pen" uses slightly higher tongue.' },
+            { id: '24', category: '/æ/ vs /ɛ/', word1: 'Tan', ipa1: '/tæn/', word2: 'Ten', ipa2: '/tɛn/', tip: 'Wide open jaw for /æ/ vs mid-low jaw for /ɛ/.' },
+            { id: '25', category: '/æ/ vs /ɛ/', word1: 'Land', ipa1: '/lænd/', word2: 'Lend', ipa2: '/lɛnd/', tip: 'Drop jaw for "land"; keep jaw higher for "lend".' },
+            { id: '26', category: '/æ/ vs /ɛ/', word1: 'Flash', ipa1: '/flæʃ/', word2: 'Flesh', ipa2: '/flɛʃ/', tip: 'Wide mouth opening for /æ/ sound.' },
+            { id: '27', category: '/æ/ vs /ɛ/', word1: 'Bad', ipa1: '/bæd/', word2: 'Bed', ipa2: '/bɛd/', tip: 'Low front vowel /æ/ vs mid front vowel /ɛ/.' },
+            { id: '28', category: '/æ/ vs /ɛ/', word1: 'Sand', ipa1: '/sænd/', word2: 'Send', ipa2: '/sɛnd/', tip: 'Lower jaw in "sand" compared to "send".' },
+            { id: '29', category: '/æ/ vs /ɛ/', word1: 'Mat', ipa1: '/mæt/', word2: 'Met', ipa2: '/mɛt/', tip: 'Lower tongue position in "mat" than in "met".' },
+            { id: '30', category: '/æ/ vs /ɛ/', word1: 'Cattle', ipa1: '/ˈkæt.əl/', word2: 'Kettle', ipa2: '/ˈkɛt.əl/', tip: 'Open jaw for "cattle"; mid-open jaw for "kettle".' },
+            { id: '31', category: '/æ/ vs /ɛ/', word1: 'Sat', ipa1: '/sæt/', word2: 'Set', ipa2: '/sɛt/', tip: 'Drop jaw for /æ/ in "sat"; mid jaw position in "set".' },
+            { id: '32', category: '/æ/ vs /ɛ/', word1: 'Jam', ipa1: '/dʒæm/', word2: 'Gem', ipa2: '/dʒɛm/', tip: 'Open jaw wide for "jam"; slightly closed for "gem".' },
+            { id: '33', category: '/æ/ vs /ɛ/', word1: 'Bag', ipa1: '/bæɡ/', word2: 'Beg', ipa2: '/bɛɡ/', tip: 'Low front vowel /æ/ vs mid front vowel /ɛ/.' },
+            { id: '34', category: '/æ/ vs /ɛ/', word1: 'Ham', ipa1: '/hæm/', word2: 'Hem', ipa2: '/hɛm/', tip: 'Drop jaw low for "ham"; keep mid-height for "hem".' },
+            { id: '35', category: '/æ/ vs /ɛ/', word1: 'Mass', ipa1: '/mæs/', word2: 'Mess', ipa2: '/mɛs/', tip: 'Open mouth wider for /æ/ in "mass".' },
+            { id: '36', category: '/æ/ vs /ɛ/', word1: 'Pack', ipa1: '/pæk/', word2: 'Peck', ipa2: '/pɛk/', tip: 'Wide jaw opening for "pack"; mid opening for "peck".' },
+            { id: '37', category: '/æ/ vs /ɛ/', word1: 'Track', ipa1: '/træk/', word2: 'Trek', ipa2: '/trɛk/', tip: 'Drop jaw low for "track"; mid-high tongue for "trek".' },
+            { id: '38', category: '/æ/ vs /ɛ/', word1: 'Past', ipa1: '/pæst/', word2: 'Pest', ipa2: '/pɛst/', tip: 'Low front vowel /æ/ vs mid vowel /ɛ/.' },
+            { id: '39', category: '/æ/ vs /ɛ/', word1: 'Band', ipa1: '/bænd/', word2: 'Bend', ipa2: '/bɛnd/', tip: 'Wider mouth gap in "band" than in "bend".' },
+            { id: '40', category: '/æ/ vs /ɛ/', word1: 'Span', ipa1: '/spæn/', word2: 'Spend', ipa2: '/spɛnd/', tip: 'Drop jaw for "span"; mid jaw position for "spend".' },
+
+            // ==========================================
+            // CATEGORY 3: /θ/ vs /s/ (20 Pairs)
+            // ==========================================
+            { id: '41', category: '/θ/ vs /s/', word1: 'Think', ipa1: '/θɪŋk/', word2: 'Sink', ipa2: '/sɪŋk/', tip: '/θ/ tongue tip between teeth; /s/ tongue tip behind teeth.' },
+            { id: '42', category: '/θ/ vs /s/', word1: 'Path', ipa1: '/pæθ/', word2: 'Pass', ipa2: '/pæs/', tip: 'Tongue protrudes slightly for /θ/; remains inside for /s/.' },
+            { id: '43', category: '/θ/ vs /s/', word1: 'Thick', ipa1: '/θɪk/', word2: 'Sick', ipa2: '/sɪk/', tip: 'Interdental fricative /θ/ vs alveolar fricative /s/.' },
+            { id: '44', category: '/θ/ vs /s/', word1: 'Thing', ipa1: '/θɪŋ/', word2: 'Sing', ipa2: '/sɪŋ/', tip: 'Tongue between teeth for "thing"; tongue behind teeth for "sing".' },
+            { id: '45', category: '/θ/ vs /s/', word1: 'Thought', ipa1: '/θɔːt/', word2: 'Sought', ipa2: '/sɔːt/', tip: 'Feel air pass over tongue tip between teeth for /θ/.' },
+            { id: '46', category: '/θ/ vs /s/', word1: 'Thumb', ipa1: '/θʌm/', word2: 'Sum', ipa2: '/sʌm/', tip: 'Tongue between upper/lower teeth for "thumb".' },
+            { id: '47', category: '/θ/ vs /s/', word1: 'Theme', ipa1: '/θiːm/', word2: 'Seem', ipa2: '/siːm/', tip: 'Soft th-friction vs sharp s-hissing sound.' },
+            { id: '48', category: '/θ/ vs /s/', word1: 'Thank', ipa1: '/θæŋk/', word2: 'Sank', ipa2: '/sæŋk/', tip: 'Tongue between teeth for "thank"; behind teeth for "sank".' },
+            { id: '49', category: '/θ/ vs /s/', word1: 'Math', ipa1: '/mæθ/', word2: 'Mass', ipa2: '/mæs/', tip: 'End with tongue between teeth for /θ/.' },
+            { id: '50', category: '/θ/ vs /s/', word1: 'Mouth', ipa1: '/maʊθ/', word2: 'Mouse', ipa2: '/maʊs/', tip: '/θ/ ends with tongue between teeth; /s/ with tongue behind incisors.' },
+            { id: '51', category: '/θ/ vs /s/', word1: 'Worth', ipa1: '/wɜːθ/', word2: 'Worse', ipa2: '/wɜːs/', tip: 'Soft th air flow vs grooved s air stream.' },
+            { id: '52', category: '/θ/ vs /s/', word1: 'Fourth', ipa1: '/fɔːθ/', word2: 'Force', ipa2: '/fɔːs/', tip: 'Tongue tip extended for /θ/; retracted behind teeth for /s/.' },
+            { id: '53', category: '/θ/ vs /s/', word1: 'Growth', ipa1: '/ɡroʊθ/', word2: 'Gross', ipa2: '/ɡroʊs/', tip: 'Interdental contact for "growth" vs alveolar ridge contact for "gross".' },
+            { id: '54', category: '/θ/ vs /s/', word1: 'Youth', ipa1: '/juːθ/', word2: 'Use', ipa2: '/juːs/', tip: 'Gentle interdental air release for /θ/.' },
+            { id: '55', category: '/θ/ vs /s/', word1: 'Myth', ipa1: '/mɪθ/', word2: 'Miss', ipa2: '/mɪs/', tip: 'Soft th friction vs sharp sibilant hiss.' },
+            { id: '56', category: '/θ/ vs /s/', word1: 'Faith', ipa1: '/feɪθ/', word2: 'Face', ipa2: '/feɪs/', tip: 'Tongue extends between teeth for /θ/ at word end.' },
+            { id: '57', category: '/θ/ vs /s/', word1: 'Thaw', ipa1: '/θɔː/', word2: 'Saw', ipa2: '/sɔː/', tip: 'Interdental placement for "thaw" vs alveolar hiss for "saw".' },
+            { id: '58', category: '/θ/ vs /s/', word1: 'Thin', ipa1: '/θɪn/', word2: 'Sin', ipa2: '/sɪn/', tip: 'Tongue between teeth for "thin"; teeth nearly closed for "sin".' },
+            { id: '59', category: '/θ/ vs /s/', word1: 'Thigh', ipa1: '/θaɪ/', word2: 'Sigh', ipa2: '/saɪ/', tip: 'Soft interdental friction in "thigh".' },
+            { id: '60', category: '/θ/ vs /s/', word1: 'Thor', ipa1: '/θɔːr/', word2: 'Sore', ipa2: '/sɔːr/', tip: 'Tongue tip shows between teeth for /θ/.' },
+
+            // ==========================================
+            // CATEGORY 4: /l/ vs /r/ (20 Pairs)
+            // ==========================================
+            { id: '61', category: '/l/ vs /r/', word1: 'Light', ipa1: '/laɪt/', word2: 'Right', ipa2: '/raɪt/', tip: '/l/ touches tongue tip to roof of mouth; /r/ curls tongue back without touching.' },
+            { id: '62', category: '/l/ vs /r/', word1: 'Lead', ipa1: '/liːd/', word2: 'Read', ipa2: '/riːd/', tip: 'Touch alveolar ridge for /l/; curve tongue back into retroflex shape for /r/.' },
+            { id: '63', category: '/l/ vs /r/', word1: 'Lock', ipa1: '/lɒk/', word2: 'Rock', ipa2: '/rɒk/', tip: 'Tongue contact behind top teeth for /l/; no top contact for /r/.' },
+            { id: '64', category: '/l/ vs /r/', word1: 'Long', ipa1: '/lɒŋ/', word2: 'Wrong', ipa2: '/rɒŋ/', tip: 'Lateral sound /l/ touches upper ridge; /r/ floats centered.' },
+            { id: '65', category: '/l/ vs /r/', word1: 'Lake', ipa1: '/leɪk/', word2: 'Rake', ipa2: '/reɪk/', tip: 'Alveolar contact for /l/ vs retroflex tongue position for /r/.' },
+            { id: '66', category: '/l/ vs /r/', word1: 'Load', ipa1: '/loʊd/', word2: 'Road', ipa2: '/roʊd/', tip: 'Tongue touches behind teeth for "load"; pulled back for "road".' },
+            { id: '67', category: '/l/ vs /r/', word1: 'Lane', ipa1: '/leɪn/', word2: 'Rain', ipa2: '/reɪn/', tip: 'Firm upper ridge contact for /l/; cupped tongue for /r/.' },
+            { id: '68', category: '/l/ vs /r/', word1: 'Lip', ipa1: '/lɪp/', word2: 'Rip', ipa2: '/rɪp/', tip: 'Tongue tip taps roof for "lip"; stays back for "rip".' },
+            { id: '69', category: '/l/ vs /r/', word1: 'Lay', ipa1: '/leɪ/', word2: 'Ray', ipa2: '/reɪ/', tip: 'Front tongue contact for /l/ vs retroflex /r/.' },
+            { id: '70', category: '/l/ vs /r/', word1: 'Low', ipa1: '/loʊ/', word2: 'Row', ipa2: '/roʊ/', tip: 'Touch roof of mouth for "low"; pull tongue back for "row".' },
+            { id: '71', category: '/l/ vs /r/', word1: 'Late', ipa1: '/leɪt/', word2: 'Rate', ipa2: '/reɪt/', tip: 'Alveolar ridge tap for /l/ vs bunched tongue for /r/.' },
+            { id: '72', category: '/l/ vs /r/', word1: 'Lice', ipa1: '/laɪs/', word2: 'Rice', ipa2: '/raɪs/', tip: 'Contact upper ridge for "lice"; curl back for "rice".' },
+            { id: '73', category: '/l/ vs /r/', word1: 'Fly', ipa1: '/flaɪ/', word2: 'Fry', ipa2: '/fraɪ/', tip: 'Clean tongue contact for "fly"; bunched retroflex for "fry".' },
+            { id: '74', category: '/l/ vs /r/', word1: 'Play', ipa1: '/pleɪ/', word2: 'Pray', ipa2: '/preɪ/', tip: 'Tongue touches ridge in "play"; pulled back in "pray".' },
+            { id: '75', category: '/l/ vs /r/', word1: 'Glass', ipa1: '/ɡlæs/', word2: 'Grass', ipa2: '/ɡræs/', tip: 'Tongue contacts upper ridge in "glass".' },
+            { id: '76', category: '/l/ vs /r/', word1: 'Clack', ipa1: '/klæk/', word2: 'Crack', ipa2: '/kræk/', tip: 'Light upper tap for /l/ vs curled tongue position for /r/.' },
+            { id: '77', category: '/l/ vs /r/', word1: 'Glow', ipa1: '/ɡloʊ/', word2: 'Grow', ipa2: '/ɡroʊ/', tip: 'Lateral release for "glow"; rhotic curl for "grow".' },
+            { id: '78', category: '/l/ vs /r/', word1: 'Bland', ipa1: '/blænd/', word2: 'Brand', ipa2: '/brænd/', tip: 'Tongue tip touches roof in "bland".' },
+            { id: '79', category: '/l/ vs /r/', word1: 'Belly', ipa1: '/ˈbɛl.i/', word2: 'Berry', ipa2: '/ˈbɛr.i/', tip: 'Alveolar contact in middle of "belly"; turned back for "berry".' },
+            { id: '80', category: '/l/ vs /r/', word1: 'Collect', ipa1: '/kəˈlɛkt/', word2: 'Correct', ipa2: '/kəˈrɛkt/', tip: 'Upper ridge touch in "collect"; retroflex curl in "correct".' },
+
+            // ==========================================
+            // CATEGORY 5: /v/ vs /b/ (20 Pairs)
+            // ==========================================
+            { id: '81', category: '/v/ vs /b/', word1: 'Van', ipa1: '/væn/', word2: 'Ban', ipa2: '/bæn/', tip: '/v/ upper teeth touch lower lip (fricative); /b/ both lips press together (plosive).' },
+            { id: '82', category: '/v/ vs /b/', word1: 'Vest', ipa1: '/vɛst/', word2: 'Best', ipa2: '/bɛst/', tip: 'Feel air friction between upper teeth and lower lip for /v/.' },
+            { id: '83', category: '/v/ vs /b/', word1: 'Vet', ipa1: '/vɛt/', word2: 'Bet', ipa2: '/bɛt/', tip: 'Continuous air through teeth/lip for "vet"; sudden lip burst for "bet".' },
+            { id: '84', category: '/v/ vs /b/', word1: 'Very', ipa1: '/ˈvɛr.i/', word2: 'Berry', ipa2: '/ˈbɛr.i/', tip: 'Fricative air flow for "very" vs bilabial pop for "berry".' },
+            { id: '85', category: '/v/ vs /b/', word1: 'Vote', ipa1: '/voʊt/', word2: 'Boat', ipa2: '/boʊt/', tip: 'Top teeth on bottom lip for "vote"; both lips sealed for "boat".' },
+            { id: '86', category: '/v/ vs /b/', word1: 'Vault', ipa1: '/vɔːlt/', word2: 'Bolt', ipa2: '/boʊlt/', tip: 'Continuous fricative /v/ vs plosive bilabial /b/.' },
+            { id: '87', category: '/v/ vs /b/', word1: 'Vast', ipa1: '/væst/', word2: 'Bast', ipa2: '/bæst/', tip: 'Teeth-on-lip contact for /v/ sound.' },
+            { id: '88', category: '/v/ vs /b/', word1: 'Serve', ipa1: '/sɜːv/', word2: 'Serb', ipa2: '/sɜːb/', tip: 'End with teeth touching bottom lip for /v/.' },
+            { id: '89', category: '/v/ vs /b/', word1: 'Valve', ipa1: '/vælv/', word2: 'Bulb', ipa2: '/bʌlb/', tip: 'Labiodental friction in "valve" vs bilabial stops in "bulb".' },
+            { id: '90', category: '/v/ vs /b/', word1: 'Vent', ipa1: '/vɛnt/', word2: 'Bent', ipa2: '/bɛnt/', tip: 'Vibrating air between teeth and lip for "vent".' },
+            { id: '91', category: '/v/ vs /b/', word1: 'Volt', ipa1: '/voʊlt/', word2: 'Bolt', ipa2: '/boʊlt/', tip: 'Teeth touch lower lip for "volt"; lips pop open for "bolt".' },
+            { id: '92', category: '/v/ vs /b/', word1: 'Vain', ipa1: '/veɪn/', word2: 'Bane', ipa2: '/beɪn/', tip: 'Continuous labiodental sound vs two-lip explosion.' },
+            { id: '93', category: '/v/ vs /b/', word1: 'Veil', ipa1: '/veɪl/', word2: 'Bail', ipa2: '/beɪl/', tip: 'Teeth on bottom lip for "veil"; closed lips for "bail".' },
+            { id: '94', category: '/v/ vs /b/', word1: 'Vary', ipa1: '/ˈvɛr.i/', word2: 'Bury', ipa2: '/ˈbɛr.i/', tip: 'Fricative vibration for /v/ vs stop burst for /b/.' },
+            { id: '95', category: '/v/ vs /b/', word1: 'Vine', ipa1: '/vaɪn/', word2: 'Bane', ipa2: '/beɪn/', tip: 'Teeth-lip friction in "vine".' },
+            { id: '96', category: '/v/ vs /b/', word1: 'Saver', ipa1: '/ˈseɪ.vər/', word2: 'Saber', ipa2: '/ˈseɪ.bər/', tip: 'Fricative in middle of "saver"; lip pop in "saber".' },
+            { id: '97', category: '/v/ vs /b/', word1: 'River', ipa1: '/ˈrɪv.ər/', word2: 'Ribber', ipa2: '/ˈrɪb.ər/', tip: 'Smooth labiodental friction in "river".' },
+            { id: '98', category: '/v/ vs /b/', word1: 'Vile', ipa1: '/vaɪl/', word2: 'Bile', ipa2: '/baɪl/', tip: 'Teeth touch lip for "vile"; two lips seal for "bile".' },
+            { id: '99', category: '/v/ vs /b/', word1: 'Clover', ipa1: '/ˈkloʊ.vər/', word2: 'Clobber', ipa2: '/ˈklɒb.ər/', tip: 'Labiodental fricative /v/ vs bilabial plosive /b/.' },
+            { id: '100', category: '/v/ vs /b/', word1: 'Vow', ipa1: '/vaʊ/', word2: 'Bow', ipa2: '/baʊ/', tip: 'Teeth on bottom lip for "vow"; lips press together for "bow".' },
+
+            // ==========================================
+            // CATEGORY 6: /p/ vs /b/ (20 Pairs)
+            // ==========================================
+            { id: '101', category: '/p/ vs /b/', word1: 'Pin', ipa1: '/pɪn/', word2: 'Bin', ipa2: '/bɪn/', tip: '/p/ is unvoiced with a puff of air (aspiration); /b/ is voiced from vocal cords.' },
+            { id: '102', category: '/p/ vs /b/', word1: 'Pat', ipa1: '/pæt/', word2: 'Bat', ipa2: '/bæt/', tip: 'Hold tissue in front of lips: it moves for aspirated /p/, stays still for /b/.' },
+            { id: '103', category: '/p/ vs /b/', word1: 'Pig', ipa1: '/pɪɡ/', word2: 'Big', ipa2: '/bɪɡ/', tip: 'Unvoiced burst of air in "pig"; voiced vocal chord start in "big".' },
+            { id: '104', category: '/p/ vs /b/', word1: 'Pack', ipa1: '/pæk/', word2: 'Back', ipa2: '/bæk/', tip: 'Aspirated puff for "pack" vs voiced onset for "back".' },
+            { id: '105', category: '/p/ vs /b/', word1: 'Pear', ipa1: '/pɛər/', word2: 'Bear', ipa2: '/bɛər/', tip: 'Strong puff of air for /p/; vocal chords vibrate for /b/.' },
+            { id: '106', category: '/p/ vs /b/', word1: 'Pie', ipa1: '/paɪ/', word2: 'Bye', ipa2: '/baɪ/', tip: 'Unvoiced plosive /p/ vs voiced plosive /b/.' },
+            { id: '107', category: '/p/ vs /b/', word1: 'Park', ipa1: '/pɑːrk/', word2: 'Bark', ipa2: '/bɑːrk/', tip: 'Breath burst for "park"; voice engages immediately for "bark".' },
+            { id: '108', category: '/p/ vs /b/', word1: 'Path', ipa1: '/pæθ/', word2: 'Bath', ipa2: '/bæθ/', tip: 'Strong air puff in "path" vs early voicing in "bath".' },
+            { id: '109', category: '/p/ vs /b/', word1: 'Pet', ipa1: '/pɛt/', word2: 'Bet', ipa2: '/bɛt/', tip: 'Unvoiced air release for "pet"; voiced release for "bet".' },
+            { id: '110', category: '/p/ vs /b/', word1: 'Pit', ipa1: '/pɪt/', word2: 'Bit', ipa2: '/bɪt/', tip: 'Air puff for "pit" vs voiced cord vibration for "bit".' },
+            { id: '111', category: '/p/ vs /b/', word1: 'Pond', ipa1: '/pɒnd/', word2: 'Bond', ipa2: '/bɒnd/', tip: 'Strong breath pulse for /p/.' },
+            { id: '112', category: '/p/ vs /b/', word1: 'Pop', ipa1: '/pɒp/', word2: 'Bop', ipa2: '/bɒp/', tip: 'Double unvoiced plosive in "pop" vs initial voicing in "bop".' },
+            { id: '113', category: '/p/ vs /b/', word1: 'Pale', ipa1: '/peɪl/', word2: 'Bale', ipa2: '/beɪl/', tip: 'Unvoiced burst for "pale"; voiced onset for "bale".' },
+            { id: '114', category: '/p/ vs /b/', word1: 'Pace', ipa1: '/peɪs/', word2: 'Base', ipa2: '/beɪs/', tip: 'Breath puff for /p/ sound.' },
+            { id: '115', category: '/p/ vs /b/', word1: 'Peer', ipa1: '/pɪər/', word2: 'Beer', ipa2: '/bɪər/', tip: 'Unvoiced initial /p/ vs voiced initial /b/.' },
+            { id: '116', category: '/p/ vs /b/', word1: 'Pull', ipa1: '/pʊl/', word2: 'Bull', ipa2: '/bʊl/', tip: 'Strong air puff for "pull"; voiced cords for "bull".' },
+            { id: '117', category: '/p/ vs /b/', word1: 'Cap', ipa1: '/kæp/', word2: 'Cab', ipa2: '/kæb/', tip: 'Silent lip release at end of "cap"; voiced hold in "cab".' },
+            { id: '118', category: '/p/ vs /b/', word1: 'Tap', ipa1: '/tæp/', word2: 'Tab', ipa2: '/tæb/', tip: 'Unvoiced lip closure for "tap"; vocal chords active in "tab".' },
+            { id: '119', category: '/p/ vs /b/', word1: 'Mop', ipa1: '/mɒp/', word2: 'Mob', ipa2: '/mɒb/', tip: 'Final unvoiced /p/ stops air; final /b/ stays voiced.' },
+            { id: '120', category: '/p/ vs /b/', word1: 'Rope', ipa1: '/roʊp/', word2: 'Robe', ipa2: '/roʊb/', tip: 'Unvoiced word ending for "rope" vs voiced ending for "robe".' },
+
+            // ==========================================
+            // CATEGORY 7: /ʊ/ vs /uː/ (20 Pairs)
+            // ==========================================
+            { id: '121', category: '/ʊ/ vs /uː/', word1: 'Full', ipa1: '/fʊl/', word2: 'Fool', ipa2: '/fuːl/', tip: '/ʊ/ is short with relaxed lips; /uː/ is long with tightly rounded, tense lips.' },
+            { id: '122', category: '/ʊ/ vs /uː/', word1: 'Pull', ipa1: '/pʊl/', word2: 'Pool', ipa2: '/puːl/', tip: 'Relaxed short vowel in "pull"; long rounded tense lips in "pool".' },
+            { id: '123', category: '/ʊ/ vs /uː/', word1: 'Look', ipa1: '/lʊk/', word2: 'Luke', ipa2: '/luːk/', tip: 'Short lax /ʊ/ sound vs long tense /uː/ sound.' },
+            { id: '124', category: '/ʊ/ vs /uː/', word1: 'Stood', ipa1: '/stʊd/', word2: 'Stewed', ipa2: '/stjuːd/', tip: 'Relaxed jaw for "stood"; tight puckered lips for "stewed".' },
+            { id: '125', category: '/ʊ/ vs /uː/', word1: 'Could', ipa1: '/kʊd/', word2: 'Cooed', ipa2: '/kuːd/', tip: 'Short lax vowel in "could"; tense prolonged vowel in "cooed".' },
+            { id: '126', category: '/ʊ/ vs /uː/', word1: 'Would', ipa1: '/wʊd/', word2: 'Wooed', ipa2: '/wuːd/', tip: 'Lax short vowel duration vs tense long duration.' },
+            { id: '127', category: '/ʊ/ vs /uː/', word1: 'Should', ipa1: '/ʃʊd/', word2: 'Shooed', ipa2: '/ʃuːd/', tip: 'Relaxed short /ʊ/ in "should"; tight rounded lips in "shooed".' },
+            { id: '128', category: '/ʊ/ vs /uː/', word1: 'Foot', ipa1: '/fʊt/', word2: 'Food', ipa2: '/fuːd/', tip: 'Short lax vowel in "foot"; long tense vowel in "food".' },
+            { id: '129', category: '/ʊ/ vs /uː/', word1: 'Soot', ipa1: '/sʊt/', word2: 'Suit', ipa2: '/suːt/', tip: 'Relaxed unrounded lips in "soot"; tight puckered lips in "suit".' },
+            { id: '130', category: '/ʊ/ vs /uː/', word1: 'Nook', ipa1: '/nʊk/', word2: 'Nuke', ipa2: '/njuːk/', tip: 'Short lax vowel in "nook"; long tense sound in "nuke".' },
+            { id: '131', category: '/ʊ/ vs /uː/', word1: 'Cook', ipa1: '/kʊk/', word2: 'Kook', ipa2: '/kuːk/', tip: 'Relaxed mouth shape for "cook"; tense tight lips for "kook".' },
+            { id: '132', category: '/ʊ/ vs /uː/', word1: 'Hood', ipa1: '/hʊd/', word2: 'Who\'d', ipa2: '/huːd/', tip: 'Short lax /ʊ/ sound vs long tense /uː/.' },
+            { id: '133', category: '/ʊ/ vs /uː/', word1: 'Book', ipa1: '/bʊk/', word2: 'Booed', ipa2: '/buːd/', tip: 'Relaxed short vowel vs tense long rounded vowel.' },
+            { id: '134', category: '/ʊ/ vs /uː/', word1: 'Took', ipa1: '/tʊk/', word2: 'Twoed', ipa2: '/tuːd/', tip: 'Lax tongue in "took"; tense lip protrusion in "twoed".' },
+            { id: '135', category: '/ʊ/ vs /uː/', word1: 'Bull', ipa1: '/bʊl/', word2: 'Boole', ipa2: '/buːl/', tip: 'Short relaxed vowel in "bull".' },
+            { id: '136', category: '/ʊ/ vs /uː/', word1: 'Push', ipa1: '/pʊʃ/', word2: 'Poosh', ipa2: '/puːʃ/', tip: 'Lax short vowel in "push" vs long tense /uː/.' },
+            { id: '137', category: '/ʊ/ vs /uː/', word1: 'Put', ipa1: '/pʊt/', word2: 'Poot', ipa2: '/puːt/', tip: 'Short lax vowel in "put".' },
+            { id: '138', category: '/ʊ/ vs /uː/', word1: 'Crook', ipa1: '/krʊk/', word2: 'Cured', ipa2: '/kjʊər/', tip: 'Lax tongue position in "crook".' },
+            { id: '139', category: '/ʊ/ vs /uː/', word1: 'Rook', ipa1: '/rʊk/', word2: 'Rude', ipa2: '/ruːd/', tip: 'Relaxed mouth for "rook"; tense lips for "rude".' },
+            { id: '140', category: '/ʊ/ vs /uː/', word1: 'Wood', ipa1: '/wʊd/', word2: 'Womb', ipa2: '/wuːm/', tip: 'Lax /ʊ/ in "wood" vs long tense /uː/ in "womb".' }
+        ];
+
+        class AppState {
+            constructor() {
+                this.pairs = JSON.parse(localStorage.getItem('phonopair_custom_pairs')) || DEFAULT_MINIMAL_PAIRS;
+                this.selectedCategory = 'All';
+                this.currentQuizIndex = 0;
+                this.secretTargetWord = null; // 'word1' or 'word2'
+                this.score = 0;
+                this.total = 0;
+                this.streak = 0;
+                this.speechVoice = null;
+                this.speechRate = 1.0;
+                this.currentSpeakIndex = 0;
+            }
+
+            saveCustomPairs() {
+                localStorage.setItem('phonopair_custom_pairs', JSON.stringify(this.pairs));
+            }
+
+            addPair(pair) {
+                this.pairs.push(pair);
+                this.saveCustomPairs();
+            }
+
+            get filteredPairs() {
+                if (this.selectedCategory === 'All') return this.pairs;
+                return this.pairs.filter(p => p.category === this.selectedCategory);
+            }
+
+            getCategories() {
+                const cats = new Set(this.pairs.map(p => p.category));
+                return ['All', ...Array.from(cats)];
+            }
+        }
+
+        const state = new AppState();
+
+        class AudioSynth {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playCorrect() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.15); // E5
+                
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+
+            playIncorrect() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, now); // A3
+                osc.frequency.setValueAtTime(180, now + 0.15);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+        }
+
+        const audioSynth = new AudioSynth();
+
+        class SpeechEngine {
+            constructor() {
+                this.synth = window.speechSynthesis;
+                this.voices = [];
+            }
+
+            initVoices(callback) {
+                const load = () => {
+                    this.voices = this.synth.getVoices().filter(v => v.lang.startsWith('en'));
+                    if (callback) callback(this.voices);
+                };
+
+                load();
+                if (speechSynthesis.onvoiceschanged !== undefined) {
+                    speechSynthesis.onvoiceschanged = load;
+                }
+            }
+
+            speak(text, onStart, onEnd) {
+                if (!this.synth) return;
+                this.synth.cancel(); // Stop current playing speech
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                if (state.speechVoice) {
+                    utterance.voice = state.speechVoice;
+                }
+                utterance.rate = state.speechRate;
+
+                if (onStart) utterance.onstart = onStart;
+                if (onEnd) utterance.onend = onEnd;
+                utterance.onerror = onEnd;
+
+                this.synth.speak(utterance);
+            }
+        }
+
+        const speechEngine = new SpeechEngine();
+
+        const DOM = {
+            voiceSelect: document.getElementById('voice-select'),
+            rateRange: document.getElementById('rate-range'),
+            rateVal: document.getElementById('rate-val'),
+            categoryChips: document.getElementById('category-chips'),
+            
+            // Views
+            viewQuiz: document.getElementById('view-quiz'),
+            viewSpeak: document.getElementById('view-speak'),
+            viewStudy: document.getElementById('view-study'),
+            
+            // Tabs
+            tabQuiz: document.getElementById('tab-quiz'),
+            tabSpeak: document.getElementById('tab-speak'),
+            tabStudy: document.getElementById('tab-study'),
+            
+            // Quiz UI
+            phonemeBadge: document.getElementById('phoneme-badge'),
+            btnPlaySecret: document.getElementById('btn-play-secret'),
+            quizPlayIcon: document.getElementById('quiz-play-icon'),
+            waveAnimation: document.getElementById('wave-animation'),
+            pulseRing: document.getElementById('pulse-ring'),
+            choiceA: document.getElementById('choice-a'),
+            choiceB: document.getElementById('choice-b'),
+            quizFeedback: document.getElementById('quiz-feedback'),
+            feedbackIcon: document.getElementById('feedback-icon'),
+            feedbackTitle: document.getElementById('feedback-title'),
+            feedbackTip: document.getElementById('feedback-tip'),
+            btnNextQuestion: document.getElementById('btn-next-question'),
+            playSideA: document.getElementById('play-side-a'),
+            playSideB: document.getElementById('play-side-b'),
+            sideAName: document.getElementById('side-a-name'),
+            sideBName: document.getElementById('side-b-name'),
+            quizScore: document.getElementById('quiz-score'),
+            quizStreak: document.getElementById('quiz-streak'),
+            btnResetStats: document.getElementById('btn-reset-stats'),
+
+            // Speak UI
+            speakTargetWord: document.getElementById('speak-target-word'),
+            speakTargetIpa: document.getElementById('speak-target-ipa'),
+            btnSpeakListenTarget: document.getElementById('btn-speak-listen-target'),
+            btnStartMic: document.getElementById('btn-start-mic'),
+            micIcon: document.getElementById('mic-icon'),
+            micStatus: document.getElementById('mic-status'),
+            speakResultBox: document.getElementById('speak-result-box'),
+            speakDetectedWord: document.getElementById('speak-detected-word'),
+            speakFeedbackText: document.getElementById('speak-feedback-text'),
+            btnSpeakPrev: document.getElementById('btn-speak-prev'),
+            btnSpeakNext: document.getElementById('btn-speak-next'),
+
+            // Study UI
+            studyPairsGrid: document.getElementById('study-pairs-grid'),
+            btnOpenCustomModal: document.getElementById('btn-open-custom-modal'),
+            customPairModal: document.getElementById('custom-pair-modal'),
+            btnCloseModal: document.getElementById('btn-close-modal'),
+            btnCancelModal: document.getElementById('btn-cancel-modal'),
+            formCustomPair: document.getElementById('form-custom-pair'),
+
+            // Theme
+            themeToggle: document.getElementById('theme-toggle')
+        };
+
+        function renderCategories() {
+            const categories = state.getCategories();
+            DOM.categoryChips.innerHTML = categories.map(cat => `
+                <button data-cat="${cat}" class="category-chip px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    state.selectedCategory === cat 
+                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                }">
+                    ${cat}
+                </button>
+            `).join('');
+
+            document.querySelectorAll('.category-chip').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    state.selectedCategory = e.currentTarget.dataset.cat;
+                    state.currentQuizIndex = 0;
+                    renderCategories();
+                    setupQuizQuestion();
+                    renderStudyGrid();
+                });
+            });
+        }
+
+        function setWaveActive(active) {
+            if (active) {
+                DOM.waveAnimation.classList.remove('opacity-0');
+                DOM.pulseRing.classList.add('animate-ping');
+                DOM.quizPlayIcon.className = 'fa-solid fa-waveform-lines';
+            } else {
+                DOM.waveAnimation.classList.add('opacity-0');
+                DOM.pulseRing.classList.remove('animate-ping');
+                DOM.quizPlayIcon.className = 'fa-solid fa-volume-high';
+            }
+        }
+
+        function setupQuizQuestion() {
+            const list = state.filteredPairs;
+            if (!list || list.length === 0) return;
+
+            if (state.currentQuizIndex >= list.length) {
+                state.currentQuizIndex = 0;
+            }
+
+            const currentPair = list[state.currentQuizIndex];
+            state.secretTargetWord = Math.random() < 0.5 ? 'word1' : 'word2';
+
+            DOM.phonemeBadge.textContent = `Contrast: ${currentPair.category}`;
+            
+            // Set choice texts
+            DOM.choiceA.querySelector('.word-text').textContent = currentPair.word1;
+            DOM.choiceA.querySelector('.ipa-text').textContent = currentPair.ipa1;
+            
+            DOM.choiceB.querySelector('.word-text').textContent = currentPair.word2;
+            DOM.choiceB.querySelector('.ipa-text').textContent = currentPair.ipa2;
+
+            // Reset buttons style
+            [DOM.choiceA, DOM.choiceB].forEach(btn => {
+                btn.disabled = false;
+                btn.className = 'choice-btn group p-5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl hover:border-indigo-500 dark:hover:border-indigo-500 transition-all flex flex-col items-center justify-center hover:shadow-md cursor-pointer';
+            });
+
+            // Hide Feedback
+            DOM.quizFeedback.classList.add('hidden');
+            DOM.btnNextQuestion.classList.add('hidden');
+
+            // Set Side-by-side player labels
+            DOM.sideAName.textContent = currentPair.word1;
+            DOM.sideBName.textContent = currentPair.word2;
+        }
+
+        function playSecretWord() {
+            const list = state.filteredPairs;
+            if (!list[state.currentQuizIndex]) return;
+            const pair = list[state.currentQuizIndex];
+            const textToSpeak = state.secretTargetWord === 'word1' ? pair.word1 : pair.word2;
+
+            speechEngine.speak(
+                textToSpeak, 
+                () => setWaveActive(true), 
+                () => setWaveActive(false)
+            );
+        }
+
+        function handleChoiceSelection(selectedWord) {
+            const list = state.filteredPairs;
+            const currentPair = list[state.currentQuizIndex];
+            const isCorrect = (selectedWord === state.secretTargetWord);
+
+            state.total++;
+            if (isCorrect) {
+                state.score++;
+                state.streak++;
+                audioSynth.playCorrect();
+            } else {
+                state.streak = 0;
+                audioSynth.playIncorrect();
+            }
+
+            // Update score
+            DOM.quizScore.textContent = `${state.score} / ${state.total}`;
+            DOM.quizStreak.textContent = state.streak;
+
+            // Highlight choice buttons
+            const correctBtn = state.secretTargetWord === 'word1' ? DOM.choiceA : DOM.choiceB;
+            const selectedBtn = selectedWord === 'word1' ? DOM.choiceA : DOM.choiceB;
+
+            [DOM.choiceA, DOM.choiceB].forEach(b => b.disabled = true);
+
+            correctBtn.classList.remove('border-slate-200', 'dark:border-slate-700');
+            correctBtn.classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/40');
+
+            if (!isCorrect) {
+                selectedBtn.classList.remove('border-slate-200', 'dark:border-slate-700');
+                selectedBtn.classList.add('border-rose-500', 'bg-rose-50', 'dark:bg-rose-950/40');
+            }
+
+            // Show Feedback Banner
+            DOM.quizFeedback.classList.remove('hidden');
+            if (isCorrect) {
+                DOM.quizFeedback.className = 'mt-6 p-4 rounded-2xl w-full max-w-md text-left transition-all bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200';
+                DOM.feedbackIcon.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-bold bg-emerald-500';
+                DOM.feedbackIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
+                DOM.feedbackTitle.textContent = 'Excellent Ear!';
+            } else {
+                DOM.quizFeedback.className = 'mt-6 p-4 rounded-2xl w-full max-w-md text-left transition-all bg-rose-100/80 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200';
+                DOM.feedbackIcon.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-bold bg-rose-500';
+                DOM.feedbackIcon.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                DOM.feedbackTitle.textContent = `The word spoken was "${state.secretTargetWord === 'word1' ? currentPair.word1 : currentPair.word2}"`;
+            }
+
+            DOM.feedbackTip.textContent = currentPair.tip;
+            DOM.btnNextQuestion.classList.remove('hidden');
+        }
+
+        let recognition = null;
+        let isListening = false;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+        }
+
+        function updateSpeakTarget() {
+            const list = state.filteredPairs;
+            if (!list[state.currentSpeakIndex]) state.currentSpeakIndex = 0;
+            const pair = list[state.currentSpeakIndex];
+
+            // Alternate between word 1 and word 2
+            const isWord1 = (state.currentSpeakIndex % 2 === 0);
+            const targetWord = isWord1 ? pair.word1 : pair.word2;
+            const targetIpa = isWord1 ? pair.ipa1 : pair.ipa2;
+
+            DOM.speakTargetWord.textContent = targetWord;
+            DOM.speakTargetIpa.textContent = targetIpa;
+            DOM.speakResultBox.classList.add('hidden');
+            DOM.micStatus.textContent = 'Click microphone and speak the word';
+        }
+
+        function startListening() {
+            if (!recognition) {
+                alert('Speech Recognition is not supported in this browser version. Please use Google Chrome on Desktop.');
+                return;
+            }
+
+            // If already listening, stop current session gracefully on toggle
+            if (isListening) {
+                try {
+                    recognition.stop();
+                } catch (err) {
+                    console.warn('SpeechRecognition stop error:', err);
+                }
+                return;
+            }
+
+            try {
+                isListening = true;
+                recognition.start();
+                DOM.btnStartMic.classList.add('animate-pulse', 'bg-rose-500');
+                DOM.btnStartMic.classList.remove('bg-emerald-500');
+                DOM.micIcon.className = 'fa-solid fa-microphone-lines';
+                DOM.micStatus.textContent = 'Listening... Speak now!';
+            } catch (err) {
+                console.warn('SpeechRecognition start error prevented:', err);
+                isListening = false;
+                DOM.btnStartMic.classList.remove('animate-pulse', 'bg-rose-500');
+                DOM.btnStartMic.classList.add('bg-emerald-500');
+                DOM.micIcon.className = 'fa-solid fa-microphone';
+            }
+        }
+
+        if (recognition) {
+            recognition.onresult = (event) => {
+                const spoken = event.results[0][0].transcript.trim().toLowerCase();
+                const target = DOM.speakTargetWord.textContent.trim().toLowerCase();
+
+                DOM.speakResultBox.classList.remove('hidden');
+                DOM.speakDetectedWord.textContent = `"${spoken}"`;
+
+                if (spoken === target || spoken.includes(target)) {
+                    audioSynth.playCorrect();
+                    DOM.speakResultBox.className = 'w-full max-w-sm p-4 rounded-2xl border text-center transition-all bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200';
+                    DOM.speakFeedbackText.textContent = 'Great pronunciation! Chrome recognized your word accurately.';
+                } else {
+                    audioSynth.playIncorrect();
+                    DOM.speakResultBox.className = 'w-full max-w-sm p-4 rounded-2xl border text-center transition-all bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200';
+                    DOM.speakFeedbackText.textContent = `Speech engine detected "${spoken}". Focus on distinct phoneme articulation!`;
+                }
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                DOM.btnStartMic.classList.remove('animate-pulse', 'bg-rose-500');
+                DOM.btnStartMic.classList.add('bg-emerald-500');
+                DOM.micIcon.className = 'fa-solid fa-microphone';
+                DOM.micStatus.textContent = 'Click microphone to try again';
+            };
+
+            recognition.onerror = () => {
+                isListening = false;
+                DOM.micStatus.textContent = 'Speech detection failed or timed out.';
+                DOM.btnStartMic.classList.remove('animate-pulse', 'bg-rose-500');
+                DOM.btnStartMic.classList.add('bg-emerald-500');
+                DOM.micIcon.className = 'fa-solid fa-microphone';
+            };
+        }
+
+        function renderStudyGrid() {
+            const list = state.filteredPairs;
+            if (list.length === 0) {
+                DOM.studyPairsGrid.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-slate-400">
+                        No minimal pairs found for this category.
+                    </div>
+                `;
+                return;
+            }
+
+            DOM.studyPairsGrid.innerHTML = list.map(pair => `
+                <div class="glass-card p-5 rounded-2xl flex flex-col justify-between hover:shadow-md transition-shadow">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                                ${pair.category}
+                            </span>
+                        </div>
+
+                        <!-- Word Comparison Box -->
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <button onclick="speechEngine.speak('${pair.word1}')" class="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-left transition-all flex items-center justify-between group">
+                                <div>
+                                    <div class="font-bold text-lg text-slate-800 dark:text-slate-100 group-hover:text-indigo-600">${pair.word1}</div>
+                                    <div class="font-mono text-xs text-slate-400">${pair.ipa1}</div>
+                                </div>
+                                <i class="fa-solid fa-volume-high text-slate-400 group-hover:text-indigo-600 text-xs"></i>
+                            </button>
+
+                            <button onclick="speechEngine.speak('${pair.word2}')" class="p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-left transition-all flex items-center justify-between group">
+                                <div>
+                                    <div class="font-bold text-lg text-slate-800 dark:text-slate-100 group-hover:text-indigo-600">${pair.word2}</div>
+                                    <div class="font-mono text-xs text-slate-400">${pair.ipa2}</div>
+                                </div>
+                                <i class="fa-solid fa-volume-high text-slate-400 group-hover:text-indigo-600 text-xs"></i>
+                            </button>
+                        </div>
+
+                        <!-- Tip -->
+                        <div class="text-xs text-slate-500 dark:text-slate-400 bg-slate-100/70 dark:bg-slate-800/40 p-2.5 rounded-xl">
+                            <strong class="text-slate-700 dark:text-slate-300">Tip:</strong> ${pair.tip}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setupEventListeners() {
+            // Speech Voices Loading
+            speechEngine.initVoices((voices) => {
+                DOM.voiceSelect.innerHTML = voices.map((v, i) => `
+                    <option value="${i}">${v.name} (${v.lang})</option>
+                `).join('');
+                if (voices.length > 0) {
+                    state.speechVoice = voices[0];
+                }
+            });
+
+            DOM.voiceSelect.addEventListener('change', (e) => {
+                const idx = e.target.value;
+                state.speechVoice = speechEngine.voices[idx];
+            });
+
+            // Rate Range
+            DOM.rateRange.addEventListener('input', (e) => {
+                state.speechRate = parseFloat(e.target.value);
+                DOM.rateVal.textContent = `${state.speechRate.toFixed(1)}x`;
+            });
+
+            // Tab Switching
+            const tabs = [
+                { btn: DOM.tabQuiz, view: DOM.viewQuiz },
+                { btn: DOM.tabSpeak, view: DOM.viewSpeak },
+                { btn: DOM.tabStudy, view: DOM.viewStudy }
+            ];
+
+            tabs.forEach(tab => {
+                tab.btn.addEventListener('click', () => {
+                    tabs.forEach(t => {
+                        t.view.classList.add('hidden');
+                        t.btn.className = 'nav-tab flex-1 py-2 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200';
+                    });
+                    tab.view.classList.remove('hidden');
+                    tab.btn.className = 'nav-tab flex-1 py-2 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-white dark:bg-slate-800 shadow-sm text-indigo-600 dark:text-indigo-400';
+
+                    if (tab.btn === DOM.tabSpeak) updateSpeakTarget();
+                });
+            });
+
+            // Quiz interactions
+            DOM.btnPlaySecret.addEventListener('click', playSecretWord);
+            DOM.choiceA.addEventListener('click', () => handleChoiceSelection('word1'));
+            DOM.choiceB.addEventListener('click', () => handleChoiceSelection('word2'));
+
+            DOM.btnNextQuestion.addEventListener('click', () => {
+                state.currentQuizIndex++;
+                setupQuizQuestion();
+            });
+
+            DOM.playSideA.addEventListener('click', () => {
+                const pair = state.filteredPairs[state.currentQuizIndex];
+                speechEngine.speak(pair.word1);
+            });
+
+            DOM.playSideB.addEventListener('click', () => {
+                const pair = state.filteredPairs[state.currentQuizIndex];
+                speechEngine.speak(pair.word2);
+            });
+
+            DOM.btnResetStats.addEventListener('click', () => {
+                state.score = 0;
+                state.total = 0;
+                state.streak = 0;
+                DOM.quizScore.textContent = '0 / 0';
+                DOM.quizStreak.textContent = '0';
+            });
+
+            // Speak interactions
+            DOM.btnStartMic.addEventListener('click', startListening);
+            DOM.btnSpeakListenTarget.addEventListener('click', () => {
+                speechEngine.speak(DOM.speakTargetWord.textContent.trim());
+            });
+
+            DOM.btnSpeakPrev.addEventListener('click', () => {
+                state.currentSpeakIndex = (state.currentSpeakIndex - 1 + state.filteredPairs.length) % state.filteredPairs.length;
+                updateSpeakTarget();
+            });
+
+            DOM.btnSpeakNext.addEventListener('click', () => {
+                state.currentSpeakIndex = (state.currentSpeakIndex + 1) % state.filteredPairs.length;
+                updateSpeakTarget();
+            });
+
+            // Custom Pair Modal
+            DOM.btnOpenCustomModal.addEventListener('click', () => DOM.customPairModal.classList.remove('hidden'));
+            DOM.btnCloseModal.addEventListener('click', () => DOM.customPairModal.classList.add('hidden'));
+            DOM.btnCancelModal.addEventListener('click', () => DOM.customPairModal.classList.add('hidden'));
+
+            DOM.formCustomPair.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newPair = {
+                    id: Date.now().toString(),
+                    category: document.getElementById('input-category').value.trim(),
+                    word1: document.getElementById('input-word1').value.trim(),
+                    ipa1: document.getElementById('input-ipa1').value.trim() || '/-/',
+                    word2: document.getElementById('input-word2').value.trim(),
+                    ipa2: document.getElementById('input-ipa2').value.trim() || '/-/',
+                    tip: document.getElementById('input-tip').value.trim() || 'Custom contrast pair.'
+                };
+
+                state.addPair(newPair);
+                renderCategories();
+                renderStudyGrid();
+                DOM.customPairModal.classList.add('hidden');
+                DOM.formCustomPair.reset();
+            });
+
+            // Dark Mode Theme Toggle
+            DOM.themeToggle.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderCategories();
+            setupQuizQuestion();
+            renderStudyGrid();
+            setupEventListeners();
+        });
+    </script>
+</body>
+</html>
