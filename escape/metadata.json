@@ -1,0 +1,8 @@
+{
+  "name": "Voice Escape Room - Padlock Challenge",
+  "description": "Voice-controlled padlock challenge escape room with real-time speech recognition, audio preview, and customizable vocal codes.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
