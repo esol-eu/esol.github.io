@@ -1,1 +1,832 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Escape Room</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Cinzel -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        .shackle-open {
+            transform: translateY(-16px) rotate(-15deg);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .shackle-closed {
+            transform: translateY(0px) rotate(0deg);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-full flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950">
 
+    <div id="toast-notification" class="fixed bottom-6 right-6 bg-slate-900 border border-emerald-500/50 text-emerald-300 px-4 py-3 rounded-2xl shadow-2xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toast-message" class="text-xs font-medium">Permalink copied to clipboard!</span>
+    </div>
+
+    <div id="browser-warning-banner" class="bg-amber-500/10 border-b border-amber-500/30 text-amber-200 px-4 py-3 text-xs text-center hidden z-50 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+        <span><strong>Browser Warning:</strong> Speech recognition and Text-to-Speech (TTS) require Google Chrome or Microsoft Edge.</span>
+    </div>
+
+    <div id="setup-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md z-40 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                        <i class="fa-solid fa-gear"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold font-cinzel text-white">Settings</h2>
+                        <p class="text-xs text-slate-400">Set up your phrases. Copy Permalink to resuse.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="copyPermalink()" class="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 rounded-xl text-xs font-medium transition flex items-center gap-2">
+                    <i class="fa-solid fa-link"></i> Copy Permalink
+                </button>
+            </div>
+
+            <form id="setup-form" onsubmit="handleSetupSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Number of Challenges (1-10)</label>
+                    <input type="number" id="input-challenges" min="1" max="10" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition" placeholder="e.g. 3">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Attempts per Padlock</label>
+                    <input type="number" id="input-attempts" min="1" max="10" value="1" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Result Code(s) (comma-separated for cycling)</label>
+                    <input type="text" id="input-secret" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition" placeholder="e.g. taught, went, eaten">
+                </div>
+                <div id="custom-phrases-container" class="space-y-2">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Words or phrases (Up to 10)</label>
+                    <div id="phrase-inputs-list" class="space-y-2">
+                        <!-- Dynamically generated inputs based on number of challenges -->
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Accent</label>
+                        <select id="input-accent" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition">
+                            <option value="en-US">American</option>
+                            <option value="en-GB">British</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Audio Preview</label>
+                        <select id="input-preview" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full mt-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition shadow-lg shadow-indigo-900/30">
+                    Start Escape Room
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <header class="border-b border-slate-800/80 bg-slate-900/50 backdrop-blur-md px-6 py-4 flex items-center justify-between z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <i class="fa-solid fa-lock text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-cinzel font-bold text-lg tracking-wider text-white">Voice Escape Room (Chrome)</h1>
+                <p class="text-xs text-slate-400 flex items-center gap-2">
+                    <span id="header-accent-badge" class="px-2 py-0.5 bg-slate-800 rounded text-slate-300">en-US</span>
+                    <span id="header-preview-badge" class="px-2 py-0.5 bg-slate-800 rounded text-slate-300">Preview: On</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div class="text-right hidden sm:block">
+                <div class="text-xs text-slate-400">Current Progress</div>
+                <div class="text-sm font-semibold text-amber-400"><span id="current-padlock-idx">1</span> / <span id="total-padlocks-count">1</span> Padlocks</div>
+            </div>
+            <button type="button" onclick="copyPermalink()" class="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 rounded-xl text-xs font-medium transition flex items-center gap-2">
+                <i class="fa-solid fa-link"></i> Permalink
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-center items-center">
+        
+        <!-- Game Completion View -->
+        <div id="victory-screen" class="hidden text-center max-w-lg w-full bg-slate-900/80 border border-amber-500/40 rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
+            <div class="w-24 h-24 bg-amber-500/20 border-2 border-amber-400 rounded-full flex items-center justify-center text-amber-400 text-4xl mx-auto mb-6 animate-bounce">
+                <i class="fa-solid fa-unlock-keyhole"></i>
+            </div>
+            <h2 class="text-3xl font-cinzel font-bold text-white mb-3">Success!</h2>
+            <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+                Good work! You unlocked the code.
+            </p>
+            
+            <!-- Secret Code Reveal Box -->
+            <div class="mb-6 bg-slate-950 p-5 rounded-2xl border border-amber-500/40 text-center shadow-inner">
+                <span class="text-xs uppercase tracking-widest text-slate-400 font-semibold block mb-2">Final Secret Code / Phrase</span>
+                <div id="victory-secret-code" class="text-2xl font-cinzel font-bold text-amber-400 tracking-wider">VICTORY OMEGA</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-6 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-left">
+                <div>
+                    <div class="text-xs text-slate-500 uppercase">Time taken</div>
+                    <div id="stat-time" class="text-lg font-mono font-bold text-amber-400">00:00</div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 uppercase">Attempts</div>
+                    <div id="stat-attempts" class="text-lg font-mono font-bold text-amber-400">0</div>
+                </div>
+            </div>
+            <button type="button" onclick="restartWithNextSecret()" class="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-amber-900/20">
+                Play Again
+            </button>
+        </div>
+
+        <!-- Active Padlock Challenge Area -->
+        <div id="game-arena" class="w-full max-w-xl flex flex-col items-center">
+            
+            <!-- Timer & Attempts Indicator -->
+            <div class="w-full flex items-center justify-between mb-6 px-2">
+                <div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-full">
+                    <i class="fa-solid fa-clock text-amber-400"></i>
+                    <span id="game-timer" class="font-mono font-semibold text-slate-200">00:00</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-full">
+                    <i class="fa-solid fa-bolt text-indigo-400"></i>
+                    <span>Attempts left: <strong id="remaining-attempts" class="text-white">1</strong></span>
+                </div>
+            </div>
+
+            <!-- The Padlock Visual Component -->
+            <div class="relative mb-8 group">
+                <div class="absolute inset-0 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition duration-500"></div>
+                <div class="relative bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center w-64 sm:w-72">
+                    <div id="padlock-shackle" class="w-24 h-28 border-8 border-slate-400 rounded-t-full relative -mb-4 transition-all duration-500 shackle-closed bg-transparent"></div>
+                    <div class="w-36 h-36 bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-slate-700 rounded-2xl flex flex-col items-center justify-center relative shadow-inner">
+                        <div class="w-12 h-12 rounded-full bg-slate-950 border border-slate-700 flex items-center justify-center text-amber-400 text-xl shadow-inner mb-2">
+                            <i id="padlock-icon" class="fa-solid fa-lock"></i>
+                        </div>
+                        <span id="padlock-level" class="text-[10px] tracking-widest uppercase font-bold text-slate-400">Challenge 1</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Secret Phrase Hint / Target Box -->
+            <div class="w-full bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 text-center backdrop-blur-md mb-6 shadow-lg">
+                <span class="text-xs uppercase tracking-widest text-slate-400 font-semibold block mb-1">Say Clearly</span>
+                <div id="target-phrase" class="text-xl sm:text-2xl font-cinzel font-bold text-amber-400 tracking-wide mb-4">"..."</div>
+                
+                <div id="preview-controls" class="flex items-center justify-center gap-3">
+                    <button type="button" onclick="playAudioPreview()" id="btn-preview" class="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 rounded-xl text-xs font-semibold transition flex items-center gap-2">
+                        <i class="fa-solid fa-volume-high"></i> Hear Pronunciation (TTS)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Voice Interaction Section -->
+            <div class="w-full flex flex-col items-center">
+                <button type="button" id="btn-listen" onclick="toggleSpeechRecognition()" class="w-20 h-20 bg-gradient-to-tr from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 rounded-full flex items-center justify-center text-2xl shadow-xl shadow-amber-600/20 transition-all transform hover:scale-105 active:scale-95 relative">
+                    <i id="mic-icon" class="fa-solid fa-microphone"></i>
+                    <span id="mic-pulse" class="absolute inset-0 rounded-full border-2 border-amber-400 animate-ping opacity-0"></span>
+                </button>
+                <div id="listen-status" class="mt-4 text-sm font-medium text-slate-400 text-center">
+                    Click microphone, then speak
+                </div>
+                <div id="transcript-feedback" class="mt-2 text-xs font-mono text-slate-400 min-h-[20px] text-center">
+                    &nbsp;
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="py-4 text-center text-xs text-slate-400 border-t border-slate-800/80">
+        Voice Escape Room &bull; Chrome Web Speech API Engine
+    </footer>
+
+    <script>
+        let config = {
+            challengesCount: 0,
+            attempts: 1,
+            secrets: [],
+            secretIndex: 0,
+            accent: 'en-US',
+            previewEnabled: true,
+            phrases: []
+        };
+
+        let currentChallenges = [];
+        let currentIndex = 0;
+        let remainingAttemptsLeft = 1;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let isListening = false;
+        let recognition = null;
+        let synth = window.speechSynthesis;
+        let audioCtx = null;
+        let hasGrantedMicPermission = false;
+        let gameTimerEl = null;
+        let isTransitioning = false;
+        let attemptsUsed = 0;
+        let toastTimer = null;
+        let micWanted = false;
+        let micStream = null;
+        let ttsActive = false;
+        let ignoreResultsUntil = 0;
+
+        window.onload = function() {
+            gameTimerEl = document.getElementById('game-timer');
+            checkBrowserCompatibility();
+            setupChallengeInputsListener();
+            parseUrlParameters();
+        };
+
+        async function checkBrowserCompatibility() {
+            try {
+                const ua = navigator.userAgent;
+                const isChrome = /Chrome/.test(ua) && !/Edge/.test(ua) && !/OPR/.test(ua);
+                const isEdge = /Edg/.test(ua);
+                let isBrave = false;
+                if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+                    isBrave = await navigator.brave.isBrave();
+                }
+
+                const banner = document.getElementById('browser-warning-banner');
+                if (!isChrome && !isEdge || isBrave) {
+                    if (banner) banner.classList.remove('hidden');
+                } else {
+                    if (banner) banner.classList.add('hidden');
+                }
+            } catch(e) {}
+        }
+
+        function setupChallengeInputsListener() {
+            const countInput = document.getElementById('input-challenges');
+            if (countInput) {
+                countInput.addEventListener('input', function() {
+                    const val = parseInt(this.value, 10);
+                    renderPhraseInputs(isNaN(val) ? 0 : val);
+                });
+            }
+        }
+
+        function renderPhraseInputs(count, existingPhrases) {
+            const container = document.getElementById('phrase-inputs-list');
+            if (!container) return;
+            const previous = existingPhrases || Array.from(container.querySelectorAll('input')).map(inp => inp.value);
+            container.innerHTML = '';
+            const clamped = Math.max(1, Math.min(10, count));
+            
+            for (let i = 0; i < clamped; i++) {
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-2";
+                const defaultVal = previous[i] || '';
+                div.innerHTML = `
+                    <span class="text-xs font-mono text-slate-500 w-6">#${i+1}</span>
+                    <input type="text" required data-phrase-idx="${i}" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition" placeholder="Enter vocal passcode #${i+1}">
+                `;
+                div.querySelector('input').value = defaultVal;
+                container.appendChild(div);
+            }
+        }
+
+        function playUnlockChime() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                
+                const now = audioCtx.currentTime;
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(587.33, now);
+                osc1.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+
+                gain1.gain.setValueAtTime(0.3, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+
+                osc1.start(now);
+                osc1.stop(now + 0.4);
+
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'triangle';
+                osc2.frequency.setValueAtTime(1174.66, now + 0.15);
+
+                gain2.gain.setValueAtTime(0.2, now + 0.15);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+
+                osc2.start(now + 0.15);
+                osc2.stop(now + 0.6);
+            } catch(e) {
+                console.warn("Web Audio chime prevented:", e);
+            }
+        }
+
+        function playFailBuzz() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.setValueAtTime(110, now + 0.15);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } catch(e) {
+                console.warn("Web Audio buzz prevented:", e);
+            }
+        }
+
+        function encodeParams(obj) {
+            try {
+                const jsonStr = JSON.stringify(obj);
+                return btoa(encodeURIComponent(jsonStr))
+                    .replace(/\+/g, '-')
+                    .replace(/\//g, '_')
+                    .replace(/=+$/, '');
+            } catch(e) {
+                return "";
+            }
+        }
+
+        function decodeParams(encodedStr) {
+            try {
+                let base64 = encodedStr.replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) {
+                    base64 += '=';
+                }
+                const jsonStr = decodeURIComponent(atob(base64));
+                return JSON.parse(jsonStr);
+            } catch(e) {
+                return null;
+            }
+        }
+
+        function readFormConfig() {
+            const count = parseInt(document.getElementById('input-challenges').value, 10);
+            const attempts = parseInt(document.getElementById('input-attempts').value, 10) || 1;
+            const secrets = document.getElementById('input-secret').value.split(',').map(x => x.trim()).filter(Boolean);
+            const phrases = Array.from(document.querySelectorAll('#phrase-inputs-list input')).map(i => i.value.trim());
+            if (!count || count < 1 || count > 10 || secrets.length === 0 || phrases.length !== count || phrases.some(x => x === '')) return null;
+            return {
+                challenges: count,
+                attempts: attempts,
+                secrets: secrets,
+                accent: document.getElementById('input-accent').value,
+                preview: document.getElementById('input-preview').value === 'true',
+                phrases: phrases
+            };
+        }
+
+        function copyPermalink() {
+            const modalOpen = !document.getElementById('setup-modal').classList.contains('hidden');
+            const stateObj = modalOpen ? readFormConfig() : {
+                challenges: config.challengesCount,
+                attempts: config.attempts,
+                secrets: config.secrets,
+                accent: config.accent,
+                preview: config.previewEnabled,
+                phrases: config.phrases
+            };
+            if (!stateObj || !stateObj.challenges) {
+                showToast("Fill in the whole setup form first.");
+                return;
+            }
+            const baseUrl = window.location.href.split(/[?#]/)[0];
+            const permalinkUrl = `${baseUrl}?data=${encodeParams(stateObj)}`;
+
+            const fallbackCopy = () => {
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = permalinkUrl;
+                    textArea.style.position = "fixed";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    showToast(ok ? "Permalink copied to clipboard!" : "Copy failed. Copy the address bar URL instead.");
+                } catch(e) {
+                    showToast("Failed to generate permalink.");
+                }
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(permalinkUrl)
+                    .then(() => showToast("Permalink copied to clipboard!"))
+                    .catch(fallbackCopy);
+            } else {
+                fallbackCopy();
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast-notification');
+            const msgEl = document.getElementById('toast-message');
+            msgEl.innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function parseUrlParameters() {
+            const params = new URLSearchParams(window.location.search);
+            let hasValidConfig = false;
+
+            const encodedPayload = params.get('data') || params.get('q');
+            if (encodedPayload) {
+                const decoded = decodeParams(encodedPayload);
+                if (decoded && typeof decoded.challenges === 'number' && decoded.challenges > 0 && Array.isArray(decoded.phrases) && decoded.phrases.length === decoded.challenges && Array.isArray(decoded.secrets) && decoded.secrets.length > 0) {
+                    config.challengesCount = decoded.challenges;
+                    config.attempts = decoded.attempts || 1;
+                    config.secrets = decoded.secrets;
+                    config.secretIndex = 0;
+                    config.accent = decoded.accent || 'en-US';
+                    config.previewEnabled = typeof decoded.preview === 'boolean' ? decoded.preview : true;
+                    config.phrases = decoded.phrases;
+                    hasValidConfig = true;
+                }
+            }
+
+            if (!hasValidConfig || config.challengesCount <= 0 || !config.secrets || config.secrets.length === 0 || config.phrases.length !== config.challengesCount) {
+                document.getElementById('input-challenges').value = '';
+                document.getElementById('input-attempts').value = '1';
+                document.getElementById('input-secret').value = '';
+                document.getElementById('input-accent').value = 'en-US';
+                document.getElementById('input-preview').value = 'true';
+                renderPhraseInputs(1);
+                
+                document.getElementById('setup-modal').classList.remove('hidden');
+            } else {
+                updateUrlWithEncodedState();
+                updateConfigUI();
+                startGameSession();
+            }
+        }
+
+        function updateUrlWithEncodedState() {
+            try {
+                const stateObj = {
+                    challenges: config.challengesCount,
+                    attempts: config.attempts,
+                    secrets: config.secrets,
+                    accent: config.accent,
+                    preview: config.previewEnabled,
+                    phrases: config.phrases
+                };
+                const encoded = encodeParams(stateObj);
+                const newUrl = `${window.location.pathname}?data=${encoded}`;
+                window.history.replaceState({}, '', newUrl);
+            } catch(e) {}
+        }
+
+        function handleSetupSubmit(e) {
+            e.preventDefault();
+            const count = parseInt(document.getElementById('input-challenges').value, 10);
+            const attempts = parseInt(document.getElementById('input-attempts').value, 10);
+            const secretRaw = document.getElementById('input-secret').value.trim();
+            const accent = document.getElementById('input-accent').value;
+            const preview = (document.getElementById('input-preview').value === 'true');
+
+            const secrets = secretRaw.split(',').map(s => s.trim()).filter(Boolean);
+            const phraseInputs = document.querySelectorAll('#phrase-inputs-list input');
+            const phrases = [];
+            phraseInputs.forEach(input => {
+                phrases.push(input.value.trim());
+            });
+
+            if (!count || count < 1 || secrets.length === 0 || phrases.length !== count || phrases.some(p => p === '')) {
+                return;
+            }
+
+            config.challengesCount = count;
+            config.attempts = attempts;
+            config.secrets = secrets;
+            config.secretIndex = 0;
+            config.accent = accent;
+            config.previewEnabled = preview;
+            config.phrases = phrases;
+
+            updateUrlWithEncodedState();
+            document.getElementById('setup-modal').classList.add('hidden');
+            updateConfigUI();
+            startGameSession();
+        }
+
+        function updateConfigUI() {
+            document.getElementById('header-accent-badge').innerText = config.accent;
+            document.getElementById('header-preview-badge').innerText = `Preview: ${config.previewEnabled ? 'On' : 'Off'}`;
+            const previewControl = document.getElementById('preview-controls');
+            if (config.previewEnabled) {
+                previewControl.classList.remove('hidden');
+            } else {
+                previewControl.classList.add('hidden');
+            }
+        }
+
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                const listenStatus = document.getElementById('listen-status');
+                if (listenStatus) listenStatus.innerText = "Speech Recognition not supported in this browser.";
+                return;
+            }
+
+            if (recognition) {
+                try { recognition.abort(); } catch(e) {}
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = function() {
+                isListening = true;
+                const btn = document.getElementById('btn-listen');
+                if (btn) {
+                    btn.classList.add('bg-red-500', 'from-red-600', 'to-red-500');
+                    btn.classList.remove('from-amber-600', 'to-amber-500');
+                }
+                const micIcon = document.getElementById('mic-icon');
+                if (micIcon) micIcon.className = "fa-solid fa-microphone-slash animate-pulse";
+                const micPulse = document.getElementById('mic-pulse');
+                if (micPulse) micPulse.classList.remove('opacity-0');
+                const listenStatus = document.getElementById('listen-status');
+                if (listenStatus) listenStatus.innerText = "Listening... Speak the passcode now!";
+            };
+
+            recognition.onresult = function(event) {
+                let interim = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += ' ' + event.results[i][0].transcript;
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+
+                const feedback = document.getElementById('transcript-feedback');
+                if (finalTranscript) {
+                    if (feedback) feedback.innerText = `Heard: "${finalTranscript.trim()}"`;
+                    evaluateSpeechMatch(finalTranscript.trim());
+                } else if (interim) {
+                    if (feedback) feedback.innerText = `Hearing: "${interim.trim()}"`;
+                }
+            };
+
+            recognition.onerror = function(event) {
+                console.warn("Speech recognition error:", event.error);
+                if (["network", "audio-capture", "not-allowed", "service-not-allowed"].includes(event.error)) micWanted = false;
+                if (event.error === 'no-speech') {
+                    const feedback = document.getElementById('transcript-feedback');
+                    if (feedback) feedback.innerText = 'No speech detected. Speak clearer or louder.';
+                } else if (event.error === 'network') {
+                    const listenStatus = document.getElementById('listen-status');
+                    if (listenStatus) listenStatus.innerText = 'Network error: speech recognition needs an internet connection.';
+                } else if (event.error === 'audio-capture') {
+                    const listenStatus = document.getElementById('listen-status');
+                    if (listenStatus) listenStatus.innerText = 'No microphone found.';
+                } else if (event.error === 'not-allowed') {
+                    const listenStatus = document.getElementById('listen-status');
+                    if (listenStatus) listenStatus.innerText = 'Microphone blocked. Check browser settings.';
+                    hasGrantedMicPermission = false;
+                }
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                if (micWanted) {
+                    setTimeout(startRecognition, 200);
+                } else {
+                    stopListeningState();
+                }
+            };
+        }
+
+        function startRecognition() {
+            if (!recognition || !micWanted) return;
+            recognition.lang = config.accent || 'en-US';
+            try {
+                recognition.start();
+            } catch(e) {
+                // Already running: nothing to do.
+            }
+        }
+
+        async function toggleSpeechRecognition() {
+            if (synth) synth.cancel();
+            ttsActive = false;
+            const listenStatus = document.getElementById('listen-status');
+
+            // Turning the microphone off (the stream stays open so no new permission popup appears)
+            if (micWanted) {
+                micWanted = false;
+                if (recognition) {
+                    try { recognition.stop(); } catch(e) { stopListeningState(); }
+                }
+                return;
+            }
+
+            if (!recognition) {
+                initSpeechRecognition();
+                if (!recognition) return;
+            }
+
+            micWanted = true;
+            if (listenStatus) listenStatus.innerText = "Starting microphone... (click Allow if asked)";
+            startRecognition();
+        }
+
+        function stopListeningState() {
+            isListening = false;
+            const btn = document.getElementById('btn-listen');
+            if (btn) {
+                btn.classList.remove('bg-red-500', 'from-red-600', 'to-red-500');
+                btn.classList.add('from-amber-600', 'to-amber-500');
+                const micIcon = document.getElementById('mic-icon');
+                if (micIcon) micIcon.className = "fa-solid fa-microphone";
+                const micPulse = document.getElementById('mic-pulse');
+                if (micPulse) micPulse.classList.add('opacity-0');
+                const listenStatus = document.getElementById('listen-status');
+                if (listenStatus && !isTransitioning) listenStatus.innerText = "Click microphone to start listening";
+            }
+        }
+
+        function playAudioPreview() {
+            if (!config.previewEnabled || !synth) return;
+            const currentPhrase = currentChallenges[currentIndex];
+            if (!currentPhrase) return;
+
+            synth.cancel();
+            const utterThis = new SpeechSynthesisUtterance(currentPhrase);
+            utterThis.lang = config.accent || 'en-US';
+            utterThis.rate = 0.9;
+            ttsActive = true;
+            const done = () => { ttsActive = false; ignoreResultsUntil = Date.now() + 700; };
+            utterThis.onend = done;
+            utterThis.onerror = done;
+            synth.speak(utterThis);
+        }
+
+        function startGameSession() {
+            currentChallenges = [...config.phrases];
+            currentIndex = 0;
+            remainingAttemptsLeft = config.attempts;
+            secondsElapsed = 0;
+            attemptsUsed = 0;
+            if (gameTimerEl) gameTimerEl.innerText = '00:00';
+
+            document.getElementById('total-padlocks-count').innerText = config.challengesCount;
+            document.getElementById('victory-screen').classList.add('hidden');
+            document.getElementById('game-arena').classList.remove('hidden');
+
+            loadCurrentPadlock();
+            startTimer();
+        }
+
+        function loadCurrentPadlock() {
+            document.getElementById('current-padlock-idx').innerText = currentIndex + 1;
+            isTransitioning = false;
+            document.getElementById('listen-status').innerText = micWanted ? 'Listening... Speak the passcode now!' : 'Click microphone to start listening';
+            document.getElementById('padlock-level').innerText = `Challenge ${currentIndex + 1} of ${config.challengesCount}`;
+            document.getElementById('target-phrase').innerText = `"${currentChallenges[currentIndex]}"`;
+            remainingAttemptsLeft = config.attempts;
+            document.getElementById('remaining-attempts').innerText = remainingAttemptsLeft;
+            document.getElementById('transcript-feedback').innerHTML = '&nbsp;';
+
+            const shackle = document.getElementById('padlock-shackle');
+            shackle.classList.remove('shackle-open');
+            shackle.classList.add('shackle-closed');
+            document.getElementById('padlock-icon').className = "fa-solid fa-lock text-amber-400";
+        }
+
+        function normalizeString(str) {
+            return str.toLowerCase()
+                .replace(/['\u2019`]/g, '')
+                .replace(/[^\p{L}\p{N}]+/gu, ' ')
+                .trim();
+        }
+
+        function evaluateSpeechMatch(transcript) {
+            if (isTransitioning || ttsActive || Date.now() < ignoreResultsUntil) return;
+            const cleanTarget = normalizeString(currentChallenges[currentIndex]);
+            const cleanSpoken = normalizeString(transcript);
+            if (!cleanSpoken) return;
+
+            attemptsUsed++;
+
+            // The spoken text must contain the whole target phrase (as whole words).
+            if ((' ' + cleanSpoken + ' ').includes(' ' + cleanTarget + ' ')) {
+                isTransitioning = true;
+                unlockPadlockSequence();
+            } else {
+                playFailBuzz();
+                remainingAttemptsLeft--;
+                document.getElementById('remaining-attempts').innerText = Math.max(0, remainingAttemptsLeft);
+                if (remainingAttemptsLeft <= 0) {
+                    isTransitioning = true;
+                    document.getElementById('listen-status').innerText = `Out of attempts! Resetting challenge...`;
+                    setTimeout(() => {
+                        loadCurrentPadlock();
+                    }, 1500);
+                } else {
+                    document.getElementById('listen-status').innerText = `Incorrect phrase. Try again! (${remainingAttemptsLeft} left)`;
+                }
+            }
+        }
+
+        function unlockPadlockSequence() {
+            playUnlockChime();
+
+            const shackle = document.getElementById('padlock-shackle');
+            shackle.classList.remove('shackle-closed');
+            shackle.classList.add('shackle-open');
+            document.getElementById('padlock-icon').className = "fa-solid fa-lock-open text-emerald-400";
+            document.getElementById('listen-status').innerText = "Padlock Unlocked! Moving to next challenge...";
+
+            setTimeout(() => {
+                currentIndex++;
+                if (currentIndex >= currentChallenges.length) {
+                    endGameSession(true);
+                } else {
+                    loadCurrentPadlock();
+                }
+            }, 1000);
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+                const secs = String(secondsElapsed % 60).padStart(2, '0');
+                if (gameTimerEl) {
+                    gameTimerEl.innerText = `${mins}:${secs}`;
+                }
+            }, 1000);
+        }
+
+        function endGameSession(success) {
+            if (timerInterval) clearInterval(timerInterval);
+            if (success) {
+                document.getElementById('game-arena').classList.add('hidden');
+                document.getElementById('victory-screen').classList.remove('hidden');
+                
+                const activeSecret = config.secrets[config.secretIndex % config.secrets.length];
+                document.getElementById('victory-secret-code').innerText = activeSecret;
+
+                const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+                const secs = String(secondsElapsed % 60).padStart(2, '0');
+                document.getElementById('stat-time').innerText = `${mins}:${secs}`;
+                document.getElementById('stat-attempts').innerText = attemptsUsed;
+            }
+        }
+
+        function restartWithNextSecret() {
+            if (config.secrets && config.secrets.length > 0) {
+                config.secretIndex = (config.secretIndex + 1) % config.secrets.length;
+            }
+            startGameSession();
+        }
+    </script>
+</body>
+</html>
