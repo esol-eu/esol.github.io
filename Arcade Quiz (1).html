@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arcade Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#120a2a;--fg:#f6f1ff;--dim:#9f93c9;--a:#ff3d6e;--b:#2de2ff;--y:#ffe14d;--g:#5cff85;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:'Press Start 2P',ui-monospace,Menlo,Consolas,monospace;font-size:clamp(10px,2.4vw,14px);line-height:1.7;overflow-x:hidden}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.28) 0 1px,transparent 1px 3px);z-index:9}
+#app{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:18px;max-width:900px;margin:0 auto;text-align:center}
+h1{font-size:clamp(20px,6vw,44px);line-height:1.3;margin:0;color:var(--y);text-shadow:4px 4px 0 var(--a),8px 8px 0 #4b1d6e;overflow-wrap:anywhere}
+p{margin:0;overflow-wrap:anywhere}
+.dim{color:var(--dim)}
+.blink{animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+button{font:inherit;color:inherit;cursor:pointer}
+.start{background:var(--g);color:#0b2a14;border:0;padding:18px 26px;box-shadow:0 6px 0 #1f8f3d;font-size:clamp(12px,3vw,18px)}
+.start:active{transform:translateY(4px);box-shadow:0 2px 0 #1f8f3d}
+.link{background:none;border:0;color:var(--dim);text-decoration:underline;padding:6px}
+.perma{border:2px dashed var(--dim);padding:10px;width:100%;font-size:9px;color:var(--dim)}
+.perma code{display:block;max-height:3.4em;overflow:auto;word-break:break-all;margin:6px 0;color:var(--b);font-family:inherit}
+.hud{display:flex;justify-content:space-between;width:100%;color:var(--dim)}
+.q{font-size:clamp(14px,4.2vw,28px);line-height:1.6;min-height:5em;display:flex;align-items:center;justify-content:center;overflow-wrap:anywhere}
+.pad{display:flex;gap:64px;width:100%;justify-content:center;align-items:center;padding:30px 0 44px}
+.big{flex:0 0 auto;width:min(29vw,240px);aspect-ratio:1;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;white-space:nowrap;font-size:clamp(12px,2.8vw,20px);color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.55);padding:0;touch-action:manipulation;transition:transform .06s,box-shadow .06s,filter .15s;box-shadow:0 0 0 7px #9a9aa6,0 0 0 15px #5a5a66,0 0 0 23px #1a1a20,0 17px 0 23px #0a0a0d,0 26px 28px 23px rgba(0,0,0,.6),inset 14px 16px 26px rgba(0,0,0,.6),inset -10px -12px 20px rgba(255,255,255,.3)}
+.big span{display:block}
+.big:hover{filter:brightness(1.12)}
+.big.l{background:radial-gradient(circle at 62% 68%,#ff9a90 0,#ff3b30 30%,#b80c0c 68%,#650000 100%)}
+.big.r{background:radial-gradient(circle at 62% 68%,#baffb4 0,#3dff5a 30%,#0c9c26 68%,#04520f 100%)}
+.big:active,.big.hit{transform:translateY(14px);box-shadow:0 0 0 7px #9a9aa6,0 0 0 15px #5a5a66,0 0 0 23px #1a1a20,0 3px 0 23px #0a0a0d,0 4px 6px 23px rgba(0,0,0,.6),inset 18px 20px 30px rgba(0,0,0,.7),inset -6px -8px 14px rgba(255,255,255,.2)}
+@keyframes push{0%{transform:none}28%{transform:translateY(14px);filter:brightness(1.35);box-shadow:0 0 0 7px #9a9aa6,0 0 0 15px #5a5a66,0 0 0 23px #1a1a20,0 3px 0 23px #0a0a0d,0 4px 6px 23px rgba(0,0,0,.6),inset 18px 20px 30px rgba(0,0,0,.7),inset -6px -8px 14px rgba(255,255,255,.2)}58%{transform:translateY(-4px)}100%{transform:none}}
+.press{animation:push .34s ease-out}
+.flash-ok{animation:ok .4s}.flash-bad{animation:bad .4s}
+.press.flash-ok{animation:push .34s ease-out,ok .4s}.press.flash-bad{animation:push .34s ease-out,bad .4s .34s}
+@keyframes ok{50%{filter:brightness(1.7)}}@keyframes bad{25%,75%{transform:translateX(-8px)}50%{transform:translateX(8px)}}
+.msg{font-size:clamp(14px,4vw,26px);line-height:1.7;color:var(--g);overflow-wrap:anywhere}
+.bar{width:100%;height:14px;border:2px solid var(--fg)}
+.bar i{display:block;height:100%;background:var(--y);width:100%}
+.bad{color:var(--a)}
+label{display:block;text-align:left;width:100%;color:var(--y);font-size:10px}
+input,textarea{width:100%;margin-top:6px;background:#0b0620;color:var(--fg);border:2px solid var(--dim);padding:10px;font:inherit;font-size:12px;line-height:1.6}
+textarea{min-height:120px}
+.row{display:flex;gap:12px;width:100%}.row>label{flex:1}
+@media (max-width:600px){.pad{flex-direction:column;gap:56px}.big{width:min(45vw,184px);font-size:clamp(12px,4vw,16px)}.row{flex-direction:column}}
+@media (prefers-reduced-motion:reduce){.blink,.press,.flash-ok,.flash-bad{animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const app=document.getElementById('app');
+const DEF={t:'RIGHT or WRONG?',i:'Are the French translations RIGHT or WRONG?',q:[['Blood is red',0],['You win money for work',1],['The sky is blue',0]],l:['Right','Wrong'],m:'You got all RIGHT and none WRONG! The code is: QWERTY',s:10};
+let cfg=null,mode='setup',qi=0,tries=1,locked=false,timers=[];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clr=()=>{timers.forEach(t=>{clearTimeout(t);clearInterval(t)});timers=[]};
+
+/* ---------- permalink token ---------- */
+function enc(o){const b=new TextEncoder().encode(JSON.stringify(o));let s='';b.forEach(x=>s+=String.fromCharCode(x));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function dec(t){t=t.replace(/-/g,'+').replace(/_/g,'/');while(t.length%4)t+='=';const s=atob(t);return JSON.parse(new TextDecoder().decode(Uint8Array.from(s,c=>c.charCodeAt(0))))}
+function valid(c){return c&&Array.isArray(c.q)&&c.q.length&&Array.isArray(c.l)&&c.l.length===2&&c.q.every(x=>Array.isArray(x)&&typeof x[0]==='string')}
+
+/* ---------- 8-bit sound ---------- */
+let AC=null;
+function ctx(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
+function beep(f,d,type='square',at=0,v=.12){const c=ctx();if(!c)return;const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+at;o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.02)}
+const SFX={
+ start:()=>[392,523,659,784].forEach((f,i)=>beep(f,.1,'square',i*.09)),
+ ok:()=>{beep(660,.08);beep(880,.16,'square',.08)},
+ bad:()=>{beep(220,.16,'sawtooth');beep(147,.4,'sawtooth',.16)},
+ win:()=>[523,659,784,1047,784,1047,1319].forEach((f,i)=>beep(f,.15,'square',i*.11)),
+ tick:()=>beep(1200,.03,'square',0,.06)};
+
+/* ---------- screens ---------- */
+function setup(note){
+ clr();mode='setup';const c=cfg||DEF;
+ const qt=c.q.map(([t,k])=>t+(k===0?'*':'')).join('\n');
+ app.innerHTML=`<h1>GAME SETUP</h1>
+ ${note?`<p class="bad">${esc(note)}</p>`:''}
+ <label>Game title<input id="f_t" value="${esc(c.t)}"></label>
+ <label>Instructions<input id="f_i" value="${esc(c.i||'')}"></label>
+ <label>Questions (one per line; add * when the FIRST legend is correct)<textarea id="f_q">${esc(qt)}</textarea></label>
+ <div class="row"><label>Button legend 1<input id="f_l0" value="${esc(c.l[0])}"></label><label>Button legend 2<input id="f_l1" value="${esc(c.l[1])}"></label></div>
+ <label>Secret message<input id="f_m" value="${esc(c.m)}"></label>
+ <label>Message timeout (seconds)<input id="f_s" type="number" min="1" max="600" value="${c.s}"></label>
+ <button class="start" id="make">CREATE GAME</button>`;
+ document.getElementById('make').onclick=()=>{
+  ctx();
+  const v=id=>document.getElementById(id).value.trim();
+  const q=v('f_q').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>{x=x.replace(/^Q?\d+[.:)]?\s+/i,'');const star=/\*\s*$/.test(x);return[x.replace(/\s*\*\s*$/,''),star?0:1]}).filter(x=>x[0]);
+  const l=[v('f_l0'),v('f_l1')];
+  if(!v('f_t')||!q.length||!l[0]||!l[1]||!v('f_m'))return setup('Fill in the title, questions, both legends and the secret message.');
+  const s=Math.max(1,Math.min(600,parseInt(v('f_s'))||10));
+  cfg={t:v('f_t'),i:v('f_i'),q,l,m:v('f_m'),s};
+  const tok=enc(cfg);
+  try{location.hash=tok}catch(e){}
+  splash();
+ };
+}
+function splash(){
+ clr();mode='splash';qi=0;tries=1;locked=false;
+ const tok=enc(cfg);
+ let base='';try{base=(document.referrer||location.href).split('#')[0]}catch(e){}
+ app.innerHTML=`<h1>${esc(cfg.t)}</h1>
+ ${cfg.i?`<p>${esc(cfg.i)}</p>`:''}
+ <p class="dim">${cfg.q.length} question${cfg.q.length>1?'s':''} · get every one right</p>
+ <button class="start blink" id="go">▶ PRESS START</button>
+ <p class="dim" style="font-size:9px">Tap, click, press Enter or hit a controller button</p>
+ <div class="perma">PERMALINK<code id="pl">#${tok}</code><button class="link" id="cp">copy link</button></div>
+ <button class="link" id="ed">edit setup</button>`;
+ document.getElementById('go').onclick=start;
+ document.getElementById('ed').onclick=()=>setup();
+ document.getElementById('cp').onclick=e=>{const txt=base+'#'+tok;const done=()=>e.target.textContent='copied!';
+  if(navigator.clipboard)navigator.clipboard.writeText(txt).then(done,()=>{prompt('Copy this link:',txt)});else prompt('Copy this link:',txt)};
+}
+function start(){ctx();SFX.start();qi=0;locked=false;play()}
+function play(){
+ clr();mode='play';locked=false;const q=cfg.q[qi];
+ app.innerHTML=`<div class="hud"><span>Q ${qi+1}/${cfg.q.length}</span><span>TRY ${tries}</span></div>
+ <div class="q">${esc(q[0])}</div>
+ <div class="pad"><button class="big l" data-i="0"><span>${esc(cfg.l[0])}</span></button><button class="big r" data-i="1"><span>${esc(cfg.l[1])}</span></button></div>`;
+ requestAnimationFrame(fit);
+ app.querySelectorAll('.big').forEach(b=>b.onclick=()=>answer(+b.dataset.i));
+}
+function fit(){
+ document.querySelectorAll('.big').forEach(b=>{const s=b.firstElementChild;if(!s)return;b.style.fontSize='';let fs=parseFloat(getComputedStyle(b).fontSize);while(s.offsetWidth>b.clientWidth*.74&&fs>6){fs-=.5;b.style.fontSize=fs+'px'}});
+}
+addEventListener('resize',fit);
+function answer(i){
+ if(mode!=='play'||locked)return;locked=true;
+ const btn=app.querySelector(`.big[data-i="${i}"]`);btn.classList.add('press');
+ if(i===cfg.q[qi][1]){
+  SFX.ok();btn.classList.add('flash-ok');
+  timers.push(setTimeout(()=>{qi++;qi<cfg.q.length?play():win()},750));
+ }else{
+  SFX.bad();btn.classList.add('flash-bad');
+  timers.push(setTimeout(()=>{
+   mode='fail';app.innerHTML=`<h1 class="bad" style="color:var(--a)">WRONG!</h1><p>Back to question 1. Try again!</p>`;
+   timers.push(setTimeout(()=>{qi=0;tries++;play()},1700));
+  },750));
+ }
+}
+function win(){
+ clr();mode='win';SFX.win();let left=cfg.s;
+ app.innerHTML=`<h1>★ YOU WIN ★</h1><p class="msg">${esc(cfg.m)}</p><div class="bar"><i id="fill"></i></div><p class="dim" id="cd">Back to start in ${left}s</p>`;
+ const f=document.getElementById('fill');f.style.transition=`width ${cfg.s}s linear`;requestAnimationFrame(()=>requestAnimationFrame(()=>f.style.width='0%'));
+ timers.push(setInterval(()=>{left--;const c=document.getElementById('cd');if(c)c.textContent='Back to start in '+Math.max(left,0)+'s'},1000));
+ timers.push(setTimeout(splash,cfg.s*1000));
+}
+
+/* ---------- input: keyboard + gamepad ---------- */
+document.addEventListener('keydown',e=>{
+ if(mode==='splash'&&(e.key==='Enter'||e.key===' ')){e.preventDefault();start()}
+ else if(mode==='play'){
+  if(['ArrowLeft','a','A'].includes(e.key))answer(0);
+  else if(['ArrowRight','l','L','d','D'].includes(e.key))answer(1);
+ }
+});
+let prev={l:0,r:0,s:0};
+function poll(){
+ let l=0,r=0,s=0;
+ const gps=navigator.getGamepads?navigator.getGamepads():[];
+ for(const g of gps){if(!g)continue;
+  g.buttons.forEach((b,k)=>{if(b.pressed){s=1;if([0,2,4,14].includes(k))l=1;if([1,3,5,15].includes(k))r=1}});
+  const x=g.axes[0]||0;if(x<-.6){l=1;s=1}if(x>.6){r=1;s=1}
+ }
+ if(mode==='splash'&&s&&!prev.s)start();
+ else if(mode==='play'){if(l&&!prev.l)answer(0);else if(r&&!prev.r)answer(1)}
+ prev={l,r,s};requestAnimationFrame(poll);
+}
+requestAnimationFrame(poll);
+
+/* ---------- boot ---------- */
+function load(){
+ const h=(location.hash||'').slice(1);
+ if(h){try{const c=dec(h);if(valid(c)){cfg=c;return splash()}}catch(e){}return setup('That link could not be read. Set up the game again.')}
+ setup();
+}
+addEventListener('hashchange',()=>{const h=(location.hash||'').slice(1);if(mode==='setup'&&!h)return;if(h&&cfg&&h===enc(cfg))return;load()});
+load();
+</script>
+</body>
+</html>
